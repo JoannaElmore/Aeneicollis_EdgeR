@@ -22,7 +22,7 @@ library(edgeR)
 # set working directory; must only contain directories containing kallisto output, no other files or directories 
 setwd("/vol_b/kallistoquant/")
 # set output directory
-out_dir <- "vol_b/DGE_analysis_output/"
+out_dir <- "/home/elmore5/DGE_analysis_output/"
 # get annotation file
 # "trinotate_annotation_report.txt" is a Trinotate output excel file, exported as tab-delimited
 transcripts <- read.delim("/vol_b/trinotate_annotation_report.txt",stringsAsFactors=FALSE)
