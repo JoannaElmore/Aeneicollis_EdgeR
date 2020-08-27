@@ -284,6 +284,10 @@ DEGlist_lrt_LowElevControl <- get_DEGs(lrt_LowElevControl, annot=transcripts, fd
 DEGlist_lrt_LowElevHeatShock <- get_DEGs(lrt_LowElevHeatShock, annot=transcripts, fdr=0.01, critFC=2)
 DEGlist_lrt_LowElevHeatvsControl <- get_DEGs(lrt_LowElevHeatvsControl, annot=transcripts, fdr=0.01, critFC=2)
 
+#####
+##Combining the LRT's to get DEG##
+#####
+
 CA_DEGlist_HeatShock <- rbind(DEGlist_lrt_HeatShockLow,DEGlist_lrt_HeatShockNatural )
 unique_HeatShock_DE_transcripts <- unique(CA_DEGlist_HeatShock$transcript_id)
 length(unique_HeatShock_DE_transcripts) # number of uniquely differentially expressed transcripts across heat shock comparisons
@@ -304,17 +308,51 @@ unique_LowElevInteract_DE_transcripts <- unique(CA_DEGlist_InteractionLowElev$tr
 length(unique_LowElevInteract_DE_transcripts)# number of uniquely differentially expressed transcripts across low elev comparisons in heat shock vs control beetles
 write.csv(unique_LowElevInteract_DE_transcripts, paste(out_dir, "LowElevInteract_comparison_DEG_list.csv", sep=""))
 
+#
+##
+###LRT list for EACH contrast###
+###
+##
+#
+
+unique_HeatShock_Low_DE_transcripts <- unique(DEGlist_lrt_HeatShockLow$transcript_id)
+length(unique_HeatShock_Low_DE_transcripts) # number of uniquely differentially expressed transcripts across heat shock low elev 
+write.csv(unique_HeatShock_Low_DE_transcripts, paste(out_dir, "HeatShock_Low_comparison_DEG_list.csv", sep=""))
+
+unique_HeatShock_Natural_DE_transcripts <- unique(DEGlist_lrt_HeatShockNatural$transcript_id)
+length(unique_HeatShock_Natural_DE_transcripts) # number of uniquely differentially expressed transcripts across heat shock nat elev 
+write.csv(unique_HeatShock_Natural_DE_transcripts, paste(out_dir, "HeatShock_Natural_comparison_DEG_list.csv", sep=""))
+
+unique_LowElev_Control_DE_transcripts <- unique(DEGlist_lrt_LowElevControl$transcript_id)
+length(unique_LowElev_Control_DE_transcripts) # number of uniquely differentially expressed transcripts across low elevation control
+write.csv(unique_LowElev_Control_DE_transcripts, paste(out_dir, "LowElev_Control_comparison_DEG_list.csv", sep=""))
+
+unique_LowElev_HeatShock_DE_transcripts <- unique(DEGlist_lrt_LowElevHeatShock$transcript_id)
+length(unique_LowElev_HeatShock_DE_transcripts) # number of uniquely differentially expressed transcripts across low elevation heat shock
+write.csv(unique_LowElev_HeatShock_DE_transcripts, paste(out_dir, "LowElev_HeatShock_comparison_DEG_list.csv", sep=""))
+
+unique_HeatShockLowElevvsNatural_DE_transcripts <- unique(DEGlist_lrt_HeatShockLowElevVsNatural$transcript_id)
+length(unique_HeatShockInteract_DE_transcripts) # number of uniquely differentially expressed transcripts across heat shock comparisons in low vs natural elev beetles
+write.csv(unique_HeatShockInteract_DE_transcripts, paste(out_dir, "unique_HeatShockInteract_DE_transcripts.csv", sep=""))
+
+unique_LowElevHeatvsControl_DE_transcripts <- unique(DEGlist_lrt_LowElevHeatvsControl$transcript_id)
+length(unique_LowElevInteract_DE_transcripts)# number of uniquely differentially expressed transcripts across low elev comparisons in heat shock vs control beetles
+write.csv(unique_LowElevInteract_DE_transcripts, paste(out_dir, "unique_LowElevInteract_DE_transcripts.csv", sep=""))
+
+unique_LowElevandHeat_DE_transcripts <- unique(DEGlist_lrt_LowElevandHeat$transcript_id)
+length(unique_LowElevandHeat_DE_transcripts)# number of uniquely differentially expressed transcripts across low elev comparisons in heat shock vs control beetles
+write.csv(unique_LowElevandHeat_DE_transcripts, paste(out_dir, "unique_LowElevandHeat_DE_transcripts.csv", sep=""))
 
 
 
 ##
 #
-# Get all the transcripts that were being used (for annotation of less than all the data)
+# Get all the transcripts that were being used (for annotation of less than all the data)?????????????????????????????
 #
 ##
 
-ALL_RKC_transcripts = rownames(lrt_inter_0$table)
-write.table(ALL_RKC_transcripts,"All_RKC_transcriptID.txt", quote=FALSE, row.names=FALSE, col.names=FALSE)
+?????ALL_CA_transcripts = rownames(lrt_inter_0$table)??????
+write.table(ALL_CA_transcripts,"All_CA_transcriptID.txt", quote=FALSE, row.names=FALSE, col.names=FALSE)
 
 
 #####
@@ -324,12 +362,12 @@ write.table(ALL_RKC_transcripts,"All_RKC_transcriptID.txt", quote=FALSE, row.nam
 #####
 
 
-write.cluster.file <- function(all_fpkm, unique_DE_transcripts, outfile, cnames) {
-  # make matrix of fpkm values using only those transcripts found in all targetList
-  FPKM_all <- data.matrix(all_fpkm[(rownames(all_fpkm) %in% unique_DE_transcripts),])
+write.cluster.file <- function(all_tpm, unique_DE_transcripts, outfile, cnames) {
+  # make matrix of tpm values using only those transcripts found in all targetList
+  TPM_all <- data.matrix(all_tpm[(rownames(all_tpm) %in% unique_DE_transcripts),])
   # log2 transform, mean center rows
-  FPKM_all = log2(FPKM_all+1)
-  centered_data = t(scale(t(FPKM_all), scale=F)) # center rows, mean substracted
+  TPM_all = log2(TPM_all+1)
+  centered_data = t(scale(t(TPM_all), scale=F)) # center rows, mean substracted
   # make data frame of centered_data matrix
   centeredDF <- as.data.frame(centered_data)
   # concatenate column names from groupings to make the column names more informative
@@ -346,7 +384,7 @@ write.cluster.file <- function(all_fpkm, unique_DE_transcripts, outfile, cnames)
   # iterate over cloneID in centeredDF, appending each topBlastHit to the blasthits vector
   for (cloneID in centeredDF$CloneID) {
     match <- annot_matches[annot_matches$transcript_id %in% cloneID,]
-    blasthits <- c(blasthits, match$Top_BLASTX_hit[1])
+    blasthits <- c(blasthits, match$sprot_Top_BLASTX_hit[1])
   }
   # add blasthits vector to centeredDF "NAME" column
   centeredDF$NAME <- blasthits
@@ -357,12 +395,13 @@ write.cluster.file <- function(all_fpkm, unique_DE_transcripts, outfile, cnames)
 }
 
 
-
-unique_pH_DE_transcripts
-unique_temp_DE_transcripts
-unique_all_DE_transcripts
-unique_interact_DE_transcripts
-
+unique_HeatShock_Low_DE_transcripts
+unique_HeatShock_Natural_DE_transcripts
+unique_LowElev_Control_DE_transcripts
+unique_LowElev_HeatShock_DE_transcripts
+unique_HeatShockLowElevvsNatural_DE_transcripts
+unique_LowElevHeatvsControl_DE_transcripts
+unique_LowElevandHeat_DE_transcripts
 
 # concatenate column names from sample ID and groupings to make the column names more informative
 # function to concatenate names
@@ -371,14 +410,18 @@ concat_name <- function(x){
 }
 
 # make a data frame of the sample ID and groupings
-sampleDF <- data.frame(sample=colnames(all_fpkm), treatment=group)
+sampleDF <- data.frame(sample=colnames(all_tpm), treatment=ElevTempGroups)
 sampleNames <- apply(sampleDF, 1, concat_name)
 sampleNames
 
-write.cluster.file(all_fpkm, unique_pH_DE_transcripts, paste(out_dir, "centered_data_pH_comparison.txt", sep=""), sampleNames)
-write.cluster.file(all_fpkm, unique_temp_DE_transcripts, paste(out_dir, "centered_data_temp_comparison.txt", sep=""), sampleNames)
-write.cluster.file(all_fpkm, unique_all_DE_transcripts, paste(out_dir, "centered_data_all_comparison.txt", sep=""), sampleNames)
-write.cluster.file(all_fpkm, unique_interact_DE_transcripts, paste(out_dir, "centered_data_interact_comparison.txt", sep=""), sampleNames)
+write.cluster.file(all_tpm, unique_HeatShock_Low_DE_transcripts, paste(out_dir, "centered_data_HeatShock_Low.txt", sep=""), sampleNames)
+write.cluster.file(all_tpm, unique_HeatShock_Natural_DE_transcripts, paste(out_dir, "centered_data_HeatShock_Natural.txt", sep=""), sampleNames)
+write.cluster.file(all_tpm, unique_LowElev_Control_DE_transcripts, paste(out_dir, "centered_data_LowElev_Control.txt", sep=""), sampleNames)
+write.cluster.file(all_tpm, unique_LowElev_HeatShock_DE_transcripts, paste(out_dir, "centered_data_LowElev_HeatShock.txt", sep=""), sampleNames)
+write.cluster.file(all_tpm, unique_HeatShockLowElevvsNatural_DE_transcripts, paste(out_dir, "centered_data_HeatShockLowElevvsNatural.txt", sep=""), sampleNames)
+write.cluster.file(all_tpm, unique_LowElevHeatvsControl_DE_transcripts, paste(out_dir, "centered_data_LowElevHeatvsControl.txt", sep=""), sampleNames)
+write.cluster.file(all_tpm, unique_LowElevandHeat_DE_transcripts, paste(out_dir, "centered_data_LowElevandHeat.txt", sep=""), sampleNames)
+
 
 
 # # sort by logFC
