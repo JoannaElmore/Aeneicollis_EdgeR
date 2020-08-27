@@ -4,12 +4,18 @@
 # 2013 Oct 15
 # updated 10 April 2014
 
-# to install packages:
-# install.packages("ggplot2")
-# source("http://bioconductor.org/biocLite.R")
-# biocLite()
-# biocLite("edgeR")
 
+# to install packages ggplot2 and edgeR:
+# install.packages("ggplot2")
+# if (!requireNamespace("BiocManager", quietly = TRUE))
+install.packages("BiocManager")
+BiocManager::install(version = "3.10")
+# if (!requireNamespace("BiocManager", quietly = TRUE))
+install.packages("BiocManager")
+
+BiocManager::install("edgeR")
+
+#load packages
 library(ggplot2)
 library(edgeR)
 
@@ -28,7 +34,7 @@ out_dir <- "/home/elmore5/DGE_analysis_output/"
 transcripts <- read.delim("/vol_b/trinotate_annotation_report.txt",stringsAsFactors=FALSE)
 
 # define groups
-groups <- read.delim("/vol_b/EdgeR_groups.txt", colClasses = c("character", rep("factor",5)))
+groups <- read.delim("/vol_b/EdgeR_groups.txt", colClasses = c("character", rep("factor",96)))
 str(groups)
 
 ##########
@@ -91,13 +97,6 @@ colnames(all_count) <- c("trimmedA10.kallisto_out", "trimmedA101.kallisto_out", 
 colnames(all_tpm) <- c("trimmedA10.kallisto_out", "trimmedA101.kallisto_out", "trimmedA102.kallisto_out", "trimmedA11.kallisto_out", "trimmedA112.kallisto_out", "trimmedA114.kallisto_out", "trimmedA116.kallisto_out", "trimmedA12.kallisto_out", "trimmedA121.kallisto_out", "trimmedA124.kallisto_out", "trimmedA126.kallisto_out", "trimmedA13.kallisto_out", "trimmedA132.kallisto_out", "trimmedA133.kallisto_out", "trimmedA145.kallisto_out", "trimmedA148.kallisto_out", "trimmedA154.kallisto_out", "trimmedA156.kallisto_out", "trimmedA158.kallisto_out", "trimmedA160.kallisto_out", "trimmedA164.kallisto_out", "trimmedA165.kallisto_out", "trimmedA168.kallisto_out", "trimmedA169.kallisto_out", "trimmedA171.kallisto_out", "trimmedA174.kallisto_out", "trimmedA175.kallisto_out", "trimmedA177.kallisto_out", "trimmedA18.kallisto_out", "trimmedA184.kallisto_out", "trimmedA186.kallisto_out", "trimmedA191.kallisto_out", "trimmedA192.kallisto_out", "trimmedA193.kallisto_out", "trimmedA196.kallisto_out", "trimmedA197.kallisto_out", "trimmedA199.kallisto_out", "trimmedA200.kallisto_out", "trimmedA207.kallisto_out", "trimmedA210.kallisto_out", "trimmedA212.kallisto_out", "trimmedA213.kallisto_out", "trimmedA214.kallisto_out", "trimmedA217.kallisto_out", "trimmedA22.kallisto_out", "trimmedA220.kallisto_out", "trimmedA221.kallisto_out", "trimmedA223.kallisto_out", "trimmedA229.kallisto_out", "trimmedA23.kallisto_out", "trimmedA232.kallisto_out", "trimmedA233.kallisto_out", "trimmedA28.kallisto_out", "trimmedA29.kallisto_out", "trimmedA3.kallisto_out", "trimmedA31.kallisto_out", "trimmedA32.kallisto_out", "trimmedA33.kallisto_out", "trimmedA34.kallisto_out", "trimmedA37.kallisto_out", "trimmedA4.kallisto_out", "trimmedA42.kallisto_out", "trimmedA43.kallisto_out", "trimmedA45.kallisto_out", "trimmedA51.kallisto_out", "trimmedA53.kallisto_out", "trimmedA54.kallisto_out", "trimmedA55.kallisto_out", "trimmedA57.kallisto_out", "trimmedA58.kallisto_out", "trimmedA59.kallisto_out", "trimmedA60.kallisto_out", "trimmedA61.kallisto_out", "trimmedA62.kallisto_out", "trimmedA65.kallisto_out", "trimmedA7.kallisto_out", "trimmedA70.kallisto_out", "trimmedA73.kallisto_out", "trimmedA74.kallisto_out", "trimmedA76.kallisto_out", "trimmedA78.kallisto_out", "trimmedA79.kallisto_out", "trimmedA8.kallisto_out", "trimmedA80.kallisto_out", "trimmedA81.kallisto_out", "trimmedA85.kallisto_out", "trimmedA86.kallisto_out", "trimmedA88.kallisto_out", "trimmedA90.kallisto_out", "trimmedA91.kallisto_out", "trimmedA93.kallisto_out", "trimmedA94.kallisto_out", "trimmedA95.kallisto_out", "trimmedA96.kallisto_out", "trimmedA97.kallisto_out", "trimmedA98.kallisto_out")
 # now the data is ready
 
-
-### as a test, remove samples B1 and B4...
-#new_count <- all_count[,c(1:5,7,8,10:20)]
-#all_count <- new_count
-#head(all_count)
-
-
 #####
 #
 # Plot total number of mapped reads to known genes: look for outliers of library size
@@ -111,143 +110,105 @@ boxplot(log2(filtered.all.count+1), las=2) # after filter
 
 #####
 #
-# Drop any poor quality libraries
+# Drop any poor quality libraries IF NEEDED
 #
 #####
 
-drops <- c("211","233")  # list the library names to be removed here
+drops <- c("","")  # list the library names to be removed here
 filtered.all.count <- filtered.all.count[,!(names(filtered.all.count) %in% drops)]
 all_tpm <- all_tpm[,!(names(all_tpm) %in% drops)]
 groups <- groups[!(groups$Sample.ID %in% drops),]
 boxplot(log2(filtered.all.count+1), las=2) # visualize again
 
-# make three sets of libraries for downstream analysis:
-
-# 1. newly hatched larvae
-new.hatch.groups <- groups[1:8,]
-new.hatch.libs <- filtered.all.count[ , names(filtered.all.count) %in% new.hatch.groups$Sample.ID]
-new.hatch.libs <- new.hatch.libs[,new.hatch.groups$Sample.ID]  # reorder so groups and libs have the same order
-
-# 2. just 7-day larvae
-seven.day.groups <- groups[9:30,]
-seven.day.libs <- filtered.all.count[ , names(filtered.all.count) %in% seven.day.groups$Sample.ID]
-seven.day.libs <- seven.day.libs[,seven.day.groups$Sample.ID]  # reorder libs columns so groups and libs have the same order
-
-# 3. both together
-all.libs <- filtered.all.count
-all.groups <- groups
-all.libs <- all.libs[,all.groups$Sample.ID]  # reorder libs columns so groups and libs have the same order
-
-#####
+##########
 #
-# Make EdgeR objects and normalize
+# Set up differential gene expression (DGE) analysis, generate summary plots:
+#   define a model matrix
+#   estimate dispersion
+#   make a plot of biological coefficient of variation vs. log(CPM)
+#   make a multidimensional scaling plot of total counts
+#   fit GLM for each transcript
 #
-#####
+##########
 
-x <- DGEList(counts=new.hatch.libs)
-y <- DGEList(counts=seven.day.libs) 
-z <- DGEList(counts=all.libs)  
+#The combined factor method = design
+ElevTempGroups <- factor(paste(Rearing_Elevation,Treatment, sep=".")
+# DGEList makes an EdgeR object
+y <- DGEList(counts=all_count, group=ElevTempGroups) # group is Rearing_Elevation and Treatment
+design <- model.matrix(~0+ElevTempGroups, data=y$samples) # crossed design, same as (~Rearing_Elevation + Treatment + Rearing_Elevation:Treatment ... see section 3.3.4 in edgeR documentation, and double check this meaning with a statistician
+colnames(design) <- levels(ElevTempGroups)
 
-# TMM normalization
-x.tmm <- calcNormFactors(x, method="TMM")
-y.tmm <- calcNormFactors(y, method="TMM")
-z.tmm <- calcNormFactors(z, method="TMM")
+#The single factor method = design2
+ElevTempGroups <- factor(paste(Rearing_Elevation,Treatment, sep=".")
+# DGEList makes an EdgeR object
+y2 <- DGEList(counts=all_count, group=ElevTempGroups) # group is Rearing_Elevation and Treatment
+# define the statistical model, a design matrix using the model.matrix function
+design2 <- model.matrix(~Rearing_Elevation*Treatment, data=y2$samples) # crossed design, same as (~Rearing_Elevation + Treatment + Rearing_Elevation:Treatment ... see section 3.3.4 in edgeR documentation, and double check this meaning with a statistician
 
-# upper quartile normalization
-x.uq <- calcNormFactors(x, method="upperquartile")
-y.uq <- calcNormFactors(y, method="upperquartile")
-z.uq <- calcNormFactors(z, method="upperquartile")
-
-#####
-#
-# MDS plots
-#
-#####
-
-plotMDS(x , main = "MDS Plot for Count Data", labels = colnames( x$counts ), cex=0.7)
-plotMDS(y , main = "MDS Plot for Count Data", labels = colnames( y$counts ), cex=0.7)
-plotMDS(z , main = "MDS Plot for Count Data", labels = colnames( z$counts ), cex=0.7)
-
-plotMDS(x.tmm , main = "MDS Plot for Count Data", labels = colnames( x$counts ), cex=0.7)
-plotMDS(y.tmm , main = "MDS Plot for Count Data", labels = colnames( y$counts ), cex=0.7)
-plotMDS(z.tmm , main = "MDS Plot for Count Data", labels = colnames( z$counts ), cex=0.7)
-
-plotMDS(x.uq , main = "MDS Plot for Count Data", labels = colnames( x$counts ), cex=0.7)
-plotMDS(y.uq , main = "MDS Plot for Count Data", labels = colnames( y$counts ), cex=0.7)
-plotMDS(z.uq , main = "MDS Plot for Count Data", labels = colnames( z$counts ), cex=0.7)
-
-# other labels:
-plotMDS(y.uq , main = "MDS Plot for Count Data", labels = colnames( y$counts ), cex=0.7)
-plotMDS(y.uq , main = "MDS Plot for Count Data", labels = y$samples$group, cex=0.7)
-plotMDS(y.uq , main = "MDS Plot for Count Data", labels = groups[9:30,]$mother, cex=0.7)
-
-# more dimensions, defined in dim.plot()
-plotMDS(y.uq , main = "MDS Plot for Count Data", labels = y$samples$group, , dim.plot=c(3,4), cex=0.7)
-
-#####
-# 
-# Test of differential expression
-# Analysis of the seven day larvae, in a blocked design to see effect of pH on the larvae while factoring out maternal effect
-#
-#####
-
-# define the statistical model design matrix using the model.matrix function
-mom <- factor(groups[9:30,]$mother)
-mom <- factor(mom, levels=c("1594", "1572", "1603"))
-pH <- factor(groups[9:30,]$larval.pH)
-pH <- factor(pH, levels=c("8", "7.8", "7.5")) # get the factors in the "right" order
-# this follows the blocking model in the EdgeR documentation 3.4.2, pg 32.
-design <- model.matrix(~mom+pH, data=y.uq$samples)  #
-design
-
-# FILTERING: filter out transcripts that do not have at least five reads out of 1,000,000 reads mapped in at least 3 samples
-# NOTE: BCV values look much better when you do this kind of filtering than just mean > a certain threshhold.
-y.uq <- y.uq[rowSums(1e+06 * y.uq$counts/expandAsMatrix(y.uq$samples$lib.size, dim(y.uq)) > 5) >= 3, ]
-
+# filter out transcripts that do not have at least two reads out of 1,000,000 reads mapped in at least 4 samples
+y <- y[rowSums(1e+06 * y$counts/expandAsMatrix(y$samples$lib.size, dim(y)) > 2) >= 4, ]
 # reset the library sizes after filtering
-y.uq$samples$lib.size <- colSums(y.uq$counts)
-
-# estimate dispersion for GLM fit, common, trended, and tagwise
+y$samples$lib.size <- colSums(y$counts)
+# TMM normalization compensates not just for library size but also the relative expression level among transcripts
+y <- calcNormFactors(y)
+# estimate dispersion for GLM fit, common, trended, and tagwise at one time
+y <- estimateDisp(y,design)
 # see edgeR docs for references on dispersion estimates, e.g., "?estimateGLMCommonDisp"
-y.uq <- estimateGLMCommonDisp(y.uq,design) 
-# estimate trended dispersion for use in tagwise dispersion estimate
-y.uq <- estimateGLMTrendedDisp(y.uq,design)
-# estimate tagwise dispersion to be used in glmFit()
-y.uq <- estimateGLMTagwiseDisp(y.uq,design)
 # plot genewise biological coefficient of variation against gene abundance
-plotBCV(y.uq)
+plotBCV(y)
 # make plot as a pdf
-pdf(file=paste(out_dir, "Day7_BCV_plot.pdf", sep=""), height=6, width=6)
-plotBCV(y.uq, main = "Day7_Biological Coefficient of Variation")
+pdf(file=paste(out_dir, "BCV_plot.pdf", sep=""), height=6, width=6)
+plotBCV(y, main = "Biological Coefficient of Variation")
 dev.off()
-# MDS plot again
-plotMDS(y.uq , main = "MDS Plot for Count Data", labels = colnames( y.uq$counts ), cex=0.7)
+# MDS plot
+plotMDS(y , main = "MDS Plot for Count Data", labels = colnames( y$counts ), cex=0.5)
 # make a pdf
-#pdf(file=paste(out_dir, "MDS_plot.pdf", sep=""), height=6, width=6)
-#plotMDS(y.uq , main = "MDS Plot for Count Data", labels = colnames( y$counts ), cex=0.7)
-#dev.off()
+pdf(file=paste(out_dir, "MDS_plot.pdf", sep=""), height=6, width=6)
+plotMDS(y , main = "MDS Plot for Count Data", labels = group, cex=0.5)
+dev.off()
 
-# GLM
-# fit the negative binomial generalized linear model (GLM) for each tag, creating a new fit object
-fit <- glmFit(y.uq, design)
-colnames(fit)
-
+boxplot(log2(y$counts+1), cex.lab=0.5, cex.axis=0.7, las=2, main="After filter") # before filter
 #####
-# 
-# LRT to show the top genes
+#
+# GLM
 #
 #####
 
-## pH comparisons
-lrt_pH_1 <- glmLRT(fit, coef=4)
-lrt_pH_2 <- glmLRT(fit, coef=5)
-lrt_pH_3 <- glmLRT(fit, contrast=c(0,0,0,-1,1))
+# fit the negative binomial generalized linear model (GLM) for each tag, creating a new fit object
+fit <- glmQLFit(y, design)
+colnames(fit)
+# make contrasts
+my.contrasts <- makeContrasts(
+HeatShockNatural = NaturalElev.HeatTreat - NaturalElev.Control, #effect of heat shock in natural elevation reared beetles
+HeatShockLow = LowElev.HeatTreat - LowElev.Control, #effect of heat shock in low elevation reared beetles
+LowElevControl = LowElev.Control - NaturalElev.Control, #effect of low elevation rearing for control temp beetles
+LowElevHeatShock = LowElev.HeatTreat - NaturalElev.HeatTreat, #effect of low elevation rearing for heat shock beetles
+LowElevandHeat = LowElev.HeatTreat - NaturalElev.Control, #effect of low elevation rearing and heat shock together
+LowElevHeatvsControl = (LowElev.HeatTreat - NaturalElev.HeatTreat) - (LowElev.Control - NaturalElev.Control), #genes that respond differently to low elevation rearing in heat shock vs control temp beetles 
+HeatShockLowElevVsNatural = (LowElev.HeatTreat - LowElev.Control) - (NaturalElev.HeatTreat - NaturalElev.Control), #genes that respond differently to heat shock in low elevation vs natural elevation reared beetles 
+levels=design)
 
-## mother comparisons
-lrt_mom_1 <- glmLRT(fit, coef=2)
-lrt_mom_2 <- glmLRT(fit, coef=3)
-lrt_mom_3 <- glmLRT(fit, contrast=c(0,-1,1,0,0))
+# perform likelihood ratio tests for various comparisons, generating QLF object for each
 
+### QLF interaction term comparisons
+qlf_HeatShockNatural <- glmQLFTest(fit, contrast=my.contrasts[,"HeatShockNatural"])
+qlf_HeatShockLow <- glmQLFTest(fit, contrast=my.contrasts[,"HeatShockLow"])
+qlf_LowElevControl <- glmQLFTest(fit, contrast=my.contrasts[,"LowElevControl"])
+qlf_LowElevHeatShock <- glmQLFTest(fit, contrast=my.contrasts[,"LowElevHeatShock"])
+qlf_LowElevandHeat <- glmQLFTest(fit, contrast=my.contrasts[,"HeatShockNatural"])
+qlf_LowElevHeatvsControl <- glmQLFTest(fit, contrast=my.contrasts[,"LowElevHeatvsControl"])
+qlf_HeatShockLowElevVsNatural <- glmQLFTest(fit, contrast=my.contrasts[,"HeatShockLowElevVsNatural"])
+
+# perform likelihood ratio tests for various comparisons, generating LRT object for each
+
+### LRT interaction term comparisons
+lrt_HeatShockNatural <- glmLRT(fit, contrast=my.contrasts[,"HeatShockNatural"])
+lrt_HeatShockLow <- glmLRT(fit, contrast=my.contrasts[,"HeatShockLow"])
+lrt_LowElevControl <- glmLRT(fit, contrast=my.contrasts[,"LowElevControl"])
+lrt_LowElevHeatShock <- glmLRT(fit, contrast=my.contrasts[,"LowElevHeatShock"])
+lrt_LowElevandHeat <- glmLRT(fit, contrast=my.contrasts[,"LowElevandHeat"])
+lrt_LowElevHeatvsControl <- glmLRT(fit, contrast=my.contrasts[,"LowElevHeatvsControl"])
+lrt_HeatShockLowElevVsNatural <- glmLRT(fit, contrast=my.contrasts[,"HeatShockLowElevVsNatural"])
 
 #####
 #
@@ -271,18 +232,13 @@ lrt_mom_3 <- glmLRT(fit, contrast=c(0,-1,1,0,0))
 #   .csv file of topTags, filtered by critical FC and onlyAnnot flag
 #   
 #####
-DEG <- summary(decideTestsDGE(lrt_pH_1, p=0.05, adjust="BH"))
 
 get_DEGs <- function(lrt, annot, fdr=0.05, critFC=2, onlyAnnot=FALSE) {
   DEG <- summary(decideTestsDGE(lrt, p=fdr, adjust="BH")) # gives numbers of genes up and downregulated at FDR < pval
   Num_DEG <- (DEG[1] + DEG[-1])[2] # gets total number of DEGs based on the FDR
-  if(Num_DEG==0){
-    cat("There are no statistically significant differences in gene expression")
-    break
-  }
   tTags <- topTags(lrt, n=Num_DEG) # gets a list of DEGs, "topTags"
   cp <- unlist(strsplit(tTags$comparison, "[* ]"))
-  comp <- paste(cp[2], "v", cp[4], sep="") # this and the preceding line make a cleaner text format for the "comparison," used in filenames.  This gets  screwed up when you use the glmLRT(fit, coef=4) style instead of the glmLRT(fit, contrast=c(0,0,0,-1,1)) style
+  comp <- paste(cp[2], "v", cp[4], sep="") # this and the preceding line make a cleaner text format for the "comparison," used in filenames
   cat("Comparison:", comp, "\n")
   cat("Total number of genes:", nrow(lrt$table), "\n")
   cat("Number of differentially expressed genes with FDR <", fdr, "=", nrow(tTags), "\n")
@@ -300,405 +256,73 @@ get_DEGs <- function(lrt, annot, fdr=0.05, critFC=2, onlyAnnot=FALSE) {
   # Some summary stats
   cat("percent all transcripts with ORFs:", sum(annot$prot_id != ".") * 100 / nrow(annot), "\n")
   cat("percent toptags with ORFs:", sum(join$prot_id != ".") * 100 / nrow(join), "\n")
-  cat("percent all transcripts with Pfam or BlastX or BlastP annotation:", sum((annot$Pfam != ".") | (annot$Top_BLASTX_hit != ".") | (annot$Top_BLASTP_hit != ".")) * 100 / nrow(annot), "\n")
-  cat("percent toptags with Pfam or BlastX or BlastP annotation:", sum((join$Pfam != ".") | (join$Top_BLASTP_hit != ".") | (join$Top_BLASTX_hit != ".")) * 100 / nrow(join), "\n")
+  cat("percent all transcripts with Pfam or BlastX or BlastP annotation:", sum((annot$Pfam != ".") | (annot$sprot_Top_BLASTX_hit != ".") | (annot$sprot_Top_BLASTP_hit != ".")) * 100 / nrow(annot), "\n")
+  cat("percent toptags with Pfam or BlastX or BlastP annotation:", sum((join$Pfam != ".") | (join$sprot_Top_BLASTP_hit != ".") | (join$sprot_Top_BLASTX_hit != ".")) * 100 / nrow(join), "\n")
   cat("number of genes upregulated, (FC > ", critFC, "):", sum(join$logFC > log2(critFC)), "\n")
   cat("number of genes downregulated, (FC < ", 1/critFC, "):", sum(join$logFC < -log2(critFC)), "\n")
   join <- join[ abs(join$logFC) > log2(critFC) , ]
   # write a csv and return the relevant dataframe
   if(onlyAnnot) {
     cat("saving .csv of up or downregulated genes, given critical FC, with only annotated sequences:", paste(out_dir, "topTags_", comp, "_", "critFC", critFC, "_", fdr, "FDR_only_w_Annot.csv", sep="" ))
-    write.csv( join[ (join$Pfam != ".") | (join$Top_BLASTX_hit != ".") | (join$Top_BLASTP_hit != ".") , ], file=paste(out_dir, "topTags_", comp, "_", "critFC", critFC, "_", fdr, "FDR_only_w_Annot.csv", sep="" ) )
-    return(join[ (join$Pfam != ".") | (join$Top_BLASTX_hit != ".") | (join$Top_BLASTP_hit != ".") , ])
+    write.csv( join[ (join$Pfam != ".") | (join$sprot_Top_BLASTX_hit != ".") | (join$sprot_Top_BLASTP_hit != ".") , ], file=paste(out_dir, "topTags_", comp, "_", "critFC", critFC, "_", fdr, "FDR_only_w_Annot.csv", sep="" ) )
+    return(join[ (join$Pfam != ".") | (join$sprot_Top_BLASTX_hit != ".") | (join$sprot_Top_BLASTP_hit != ".") , ])
   } else {
     cat("saving .csv of up/downregulated genes, given a critical FC:", paste(out_dir, "topTags_", comp, "_", "critFC", critFC, "_", fdr, "FDR.csv", sep="" ))
     write.csv( join, file=paste(out_dir, "topTags_", comp, "_", "critFC", critFC, "_", fdr, "FDR.csv", sep="" ) )
     return(join)    
   }
 }
-
-# get lists of differentially expressed genes among mothers from each comparison using getDEGs function
-DEGlist_lrt_mom_1 <- get_DEGs(lrt_mom_1, annot=transcripts, fdr=0.01, critFC=2)
-DEGlist_lrt_mom_2 <- get_DEGs(lrt_mom_2, annot=transcripts, fdr=0.01, critFC=2)
-DEGlist_lrt_mom_3 <- get_DEGs(lrt_mom_3, annot=transcripts, fdr=0.01, critFC=2)
-
-RKC4_DEGlist_mom <- rbind(DEGlist_lrt_mom_1, DEGlist_lrt_mom_2, DEGlist_lrt_mom_3)
-unique_mom_DE_transcripts <- unique(RKC4_DEGlist_mom$transcript_id)
-length(unique_mom_DE_transcripts) # number of uniquely differentially expressed transcripts across mom comparisons
-write.csv(unique_mom_DE_transcripts, paste(out_dir, "mom_comparison_DEG_list.csv", sep=""))
-
-# get lists of differentially expressed genes across pH levels from each comparison using getDEGs function
-DEGlist_lrt_pH_1 <- get_DEGs(lrt_pH_1, annot=transcripts, fdr=0.1, critFC=0) # 0 DE genes
-DEGlist_lrt_pH_2 <- get_DEGs(lrt_pH_2, annot=transcripts, fdr=0.1, critFC=1)  # 2 genes!
-DEGlist_lrt_pH_3 <- get_DEGs(lrt_pH_3, annot=transcripts, fdr=0.1, critFC=1) # 0 DE genes
-write.csv(DEGlist_lrt_pH_2, paste(out_dir, "pH_comparison_DEG_list.csv", sep=""))
-
-
-#####
-#
-# write cluster files
-#
-#####
-
-write.cluster.file <- function(all_tpm, unique_DE_transcripts, outfile, cnames) {
-  # make matrix of tpm values using only those transcripts found in all targetList
-  TPM_all <- data.matrix(all_tpm[(rownames(all_tpm) %in% unique_DE_transcripts),])
-  # log2 transform, mean center rows
-  TPM_all = log2(TPM_all+1)
-  centered_data = t(scale(t(TPM_all), scale=F)) # center rows, mean substracted
-  # make data frame of centered_data matrix
-  centeredDF <- as.data.frame(centered_data)
-  # concatenate column names from groupings to make the column names more informative
-  colnames(centeredDF) <- cnames
-  # add CloneID vector to centeredDF
-  centeredDF$CloneID <- rownames(centered_data)
-  # get vector of cloneID
-  cloneIDs <- centeredDF$CloneID
-  ### generate a new vector of topBlastHits for those cloneIDs
-  # generate a subset data frame of the matches to transcript_id in the annotation dataframe; this makes the search in the loop below much faster
-  annot_matches <- transcripts[(transcripts$transcript_id %in% cloneIDs),]
-  # initialize an empty vector
-  blasthits <- c()
-  # iterate over cloneID in centeredDF, appending each topBlastHit to the blasthits vector
-  for (cloneID in centeredDF$CloneID) {
-    match <- annot_matches[annot_matches$transcript_id %in% cloneID,]
-    blasthits <- c(blasthits, match$TopBlastHit[1])
-  }
-  # add blasthits vector to centeredDF "NAME" column
-  centeredDF$NAME <- blasthits
-  # reorder columns
-  centeredDF <- centeredDF[,c(ncol(centeredDF)-1,ncol(centeredDF),1:(ncol(centeredDF)-2))] # more generalized form
-  # save centeredDF 
-  write.table(centeredDF, file=outfile, quote=FALSE, row.names=FALSE, sep="\t")
-}
-
-
-
-
-
-head(unique_mom_DE_transcripts)
-
-
-
-# concatenate column names from sample ID and groupings to make the column names more informative
-# function to concatenate names
-concat_name <- function(x){
-  paste(x[1],x[3],x[5],sep="_")
-}
-
-# make a data frame of the sample ID and groupings
-
-sampleNames <- apply(groups[-c(1:8),], 1, concat_name)
-sampleNames
-
-write.cluster.file(all_tpm[,c(seven.day.groups$Sample.ID)], unique_mom_DE_transcripts, paste(out_dir, "Day7_centered_data_mom_comparison.txt", sep=""), sampleNames)
-
-
-# # sort by logFC
-# sorted_tags <- annotated_DEGs_pHlow[with(annotated_DEGs_pHlow, order(logFC)), ]
-# 
-# # write a .csv based on a threshold FC, in this case, ( FC < 0.5 ) and ( FC > 2 )
-# write.csv(annotated_DEGs_pHlow[ abs(annotated_DEGs_pHlow$logFC) > 1 , ], file=paste( out_dir, "topTags_DEGlist_pHlow_FDR0_00001_PfamHits_logFC_greater_than_2.csv", sep="" )
-# 
-
-##########
-#
-# Functions for genewise data analysis
-#
-##########
-
-
-
-#####
-#
-# JS plyr version
-#
-#####
-pH # use as.factor from group file, or make this as a factor
-mom # use as.factor from group file, or make this as a factor
-
-library(plyr)
-library(ggplot2)
-
-gene="comp0_c0_seq1"
-
-get_gene_data <- function(gene, all_tpm) {
-  gene_data <- data.frame(tpm=as.numeric(all_tpm[gene,]), pH=pH, Mom=mom)
-  tpm_mean<-ddply(gene_data,.(pH,mom), function(d) mean(d$tpm)) # if group file has columns called pH and Mom
-  SD<-ddply(gene_data,.(pH,mom), function(d) sd(d$tpm)) # if group file has columns called pH and Mom
-  names(tpm_mean)=c("pH","Mom","Mean") # rename
-  names(SD)=c("pH","Mom","SD") # rename
-  out_frame=merge(tpm_mean,SD) #make one data frame
-  out_frame=out_frame[,c(3,4,1,2)] # reorder columns
-  return(out_frame)
-}
-
-gene_data <- get_gene_data("comp0_c0_seq1", all_tpm[,c(seven.day.groups$Sample.ID)])  #the gene in all_tpm for which data will be returned
-
-gene_data
-
-
-
-####
-# Function: get_gene_data
-# examine expression of an individual gene based on transcript_id
-# Scott's method
-####
-# 
-# 
-# 
-# get_gene_data <- function(gene, tpm) {
-#   A_mean <- apply(tpm[gene,1:5], 1, mean)
-#   B_mean <- apply(tpm[gene,6:10], 1, mean)
-#   C_mean <- apply(tpm[gene,11:15], 1, mean)
-#   D_mean <- apply(tpm[gene,16:20], 1, mean)
-#   E_mean <- apply(tpm[gene,21:25], 1, mean)
-#   F_mean <- apply(tpm[gene,26:30], 1, mean)
-#   G_mean <- apply(tpm[gene,31:35], 1, mean)
-#   H_mean <- apply(tpm[gene,36:40], 1, mean)
-#   J_mean <- apply(tpm[gene,41:45], 1, mean)
-#   A_sd <- apply(tpm[gene,1:5], 1, sd)
-#   B_sd <- apply(tpm[gene,6:10], 1, sd)
-#   C_sd <- apply(tpm[gene,11:15], 1, sd)
-#   D_sd <- apply(tpm[gene,16:20], 1, sd)
-#   E_sd <- apply(tpm[gene,21:25], 1, sd)
-#   F_sd <- apply(tpm[gene,26:30], 1, sd)
-#   G_sd <- apply(tpm[gene,31:35], 1, sd)
-#   H_sd <- apply(tpm[gene,36:40], 1, sd)
-#   J_sd <- apply(tpm[gene,41:45], 1, sd)
-#   tpm_mean <- c(A_mean, B_mean, C_mean, D_mean, E_mean, F_mean, G_mean, H_mean, J_mean)
-#   SD <- c(A_sd, B_sd, C_sd, D_sd, E_sd, F_sd, G_sd, H_sd, J_sd)
-#   names <- c("A", "B", "C", "D", "E", "F", "G", "H", "J")
-#   pH_grp <- c("amb", "low", "amb", "low", "mid", "amb", "mid", "low", "mid")
-#   temp_grp <- c("13C", "11C", "11C", "14C", "13C", "14C", "14C", "13C", "11C")
-#   out_frame <- data.frame(tpm_mean, SD, pH_grp, temp_grp, names)
-#   out_frame$pH_grp <- factor( out_frame$pH_grp, levels = c( "amb", "mid", "low" ) )
-#   return(out_frame)
-# }
-
-# get tpm data for a specific gene
-#gene_data <- get_gene_data("comp106087_c0_seq1", all_tpm)
-
-
-#####
-# Function: get_annot
-# gets annotation for a particular gene
-#####
-
-get_annot <- function(gene_in, annotation) {
-  L <- annotation$transcript_id == gene_in
-  cat("transcript: ", as.vector(annotation[L,]$transcript_id), "\n")
-  cat("top blast hit: ", as.vector(annotation[L,]$TopBlastHit), "\n")
-  cat("gene ontology: ", as.vector(annotation[L,]$gene_ontology), "\n")
-  cat("PFam: ", as.vector(annotation[L,]$Pfam), "\n")
-  cat("Signal Peptide: ", as.vector(annotation[L,]$SignalP), "\n")
-  cat("transmembrane domain: ", as.vector(annotation[L,]$TmHMM), "\n")
-  cat("eggnog: ", as.vector(annotation[L,]$eggnog), "\n")
-}
-
-# test getting annotation data
-#get_annot("comp99839_c0_seq1", transcripts)
-
-#####
-# Function: plot_genewise_tpm
-# plots tpm for the specified gene
-#####
-
-# plot_genewise_tpm <- function(gene_in, plot_title, add_title) {
-#   k <- ggplot(gene_in, aes( x = temp_grp, y = tpm_mean, ymax = tpm_mean + SD, ymin = tpm_mean - SD, fill = temp_grp ))
-#   k + geom_bar(stat="identity") + facet_grid( . ~ pH_grp ) + geom_errorbar( width = 0.3) + scale_fill_brewer(type="qual", palette="Paired") + labs(title=paste(plot_title, add_title))
-#   k + geom_bar(stat="identity") + facet_grid( . ~ pH_grp ) + geom_errorbar( width = 0.3) + scale_fill_brewer(type="qual", palette="Paired") + labs(title=paste(plot_title, add_title))
-#   ggsave(filename = paste(out_dir, plot_title, "_", add_title, "_genewise_TPM", ".pdf", sep =""), width = 6, height = 6)
-#   }
-
-# test plotting tpm data
-#plot_genewise_tpm(gene_data, "titleA", "titleB")
-
-#####
-# function: plot_interaction
-# makes an interaction plot for a given gene
-#####
-
-plot_interaction <- function(gene_data, plot_title, add_title) {
-  h <- ggplot(gene_data, aes(x = pH, y = Mean, ymax = Mean + SD, ymin = Mean - SD, color=Mom))
-  h + geom_errorbar(color="black", width=0.1) + geom_point(aes(shape=Mom), color="black",size = 6) + geom_line(aes(group=Mom), size=0.5, linetype=1) + labs(title=paste(plot_title, add_title), x = "pH treatment", y = "mean FPKM") + scale_color_manual(values=c("#3399FF", "#66CC00", "#CC0066"))
-  ggsave(filename = paste(out_dir, plot_title, "_", add_title, "_interactionPlot_tpm", ".pdf", sep =""), width = 6, height = 6)
-}
-
-#plot_interaction(gene_data,"TITLEA","TITLEB")
-#####
-# function: GOI_data
-# master function to get data and plots from Gene Of Interest
-#   gene_name: the "transcript_id" for your gene of interest
-#   annotation: the full trinotate annotation report as a data frame
-#   tpm_table: the table of TPM values 
-#####
-
-GOI_data <- function(gene_name, annotation, tpm_table, graph_title) {
-  gene_data <- get_gene_data(gene_name, tpm_table)
-  get_annot(gene_name, annotation)
-  #plot_genewise_tpm(gene_data, gene_name, graph_title)
-  plot_interaction(gene_data, gene_name, graph_title)
-}
-
-# generate genewise plots based on a gene of interest
-GOI_data("comp100107_c0_seq1", transcripts, all_tpm[,c(seven.day.groups$Sample.ID)], "Carbonic Anhydrase")
-
-###
-#
-#  Example: read in a list of genes of interest, and make plots
-#
-###
-
-desired_graphs = read.csv(file.choose())  #a text file with two columns, the geneID (gene_name) and a descriptor (graph_title)
-
-for (i in 1:nrow(desired_graphs)) {
-  GOI_data(desired_graphs[i,1], transcripts, all_tpm[,c(seven.day.groups$Sample.ID)], desired_graphs[i,2])
-}
-
-#################################################################################################
-#################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################
-#####
-# 
-# Test of differential expression
-# Analysis of the Day 0 larvae, in a blocked design to see effect of pH on the larvae while factoring out maternal effect
-#
-#####
-
-# define the statistical model design matrix using the model.matrix function
-pH <- factor(new.hatch.groups$mother.pH)
-pH <- factor(pH, levels=c("8", "7.8", "7.5")) # get the factors in the "right" order
-# this follows the blocking model in the EdgeR documentation 3.4.2, pg 32.
-design <- model.matrix(~pH, data=x.uq$samples)  #
-design
-
-# FILTERING: filter out transcripts that do not have at least five reads out of 1,000,000 reads mapped in at least 3 samples
-# NOTE: BCV values look much better when you do this kind of filtering than just mean > a certain threshhold.
-x.uq <- x.uq[rowSums(1e+06 * x.uq$counts/expandAsMatrix(x.uq$samples$lib.size, dim(x.uq)) > 5) >= 3, ]
-
-# reset the library sizes after filtering
-x.uq$samples$lib.size <- colSums(x.uq$counts)
-
-# estimate dispersion for GLM fit, common, trended, and tagwise
-# see edgeR docs for references on dispersion estimates, e.g., "?estimateGLMCommonDisp"
-x.uq <- estimateGLMCommonDisp(x.uq,design) 
-# estimate trended dispersion for use in tagwise dispersion estimate
-x.uq <- estimateGLMTrendedDisp(x.uq,design)
-# estimate tagwise dispersion to be used in glmFit()
-x.uq <- estimateGLMTagwiseDisp(x.uq,design)
-# plot genewise biological coefficient of variation against gene abundance
-plotBCV(x.uq)
-# make plot as a pdf
-pdf(file=paste(out_dir, "Day0_BCV_plot.pdf", sep=""), height=6, width=6)
-plotBCV(x.uq, main = "Biological Coefficient of Variation")
-dev.off()
-# MDS plot again
-plotMDS(x.uq , main = "MDS Plot for Count Data", labels = colnames( x.uq$counts ), cex=0.7)
-# make a pdf
-#pdf(file=paste(out_dir, "MDS_plot.pdf", sep=""), height=6, width=6)
-#plotMDS(x.uq , main = "MDS Plot for Count Data", labels = colnames( y$counts ), cex=0.7)
-#dev.off()
-
-# GLM
-# fit the negative binomial generalized linear model (GLM) for each tag, creating a new fit object
-fit <- glmFit(x.uq, design)
+# display the coefficients
 colnames(fit)
 
-#####
-# 
-# LRT to show the top genes
+# get lists of differentially expressed genes from each comparison using getDEGs function
+DEGlist_lrt_HeatShockLow <- get_DEGs(lrt_HeatShockLow, annot=transcripts, fdr=0.01, critFC=2)
+DEGlist_lrt_HeatShockLowElevVsNatural <- get_DEGs(lrt_HeatShockLowElevVsNatural, annot=transcripts, fdr=0.01, critFC=2)
+DEGlist_lrt_HeatShockNatural <- get_DEGs(lrt_HeatShockNatural, annot=transcripts, fdr=0.01, critFC=2)
+DEGlist_lrt_LowElevandHeat <- get_DEGs(lrt_LowElevandHeat, annot=transcripts, fdr=0.01, critFC=2)
+DEGlist_lrt_LowElevControl <- get_DEGs(lrt_LowElevControl, annot=transcripts, fdr=0.01, critFC=2)
+DEGlist_lrt_LowElevHeatShock <- get_DEGs(lrt_LowElevHeatShock, annot=transcripts, fdr=0.01, critFC=2)
+DEGlist_lrt_LowElevHeatvsControl <- get_DEGs(lrt_LowElevHeatvsControl, annot=transcripts, fdr=0.01, critFC=2)
+
+CA_DEGlist_HeatShock <- rbind(DEGlist_lrt_HeatShockLow,DEGlist_lrt_HeatShockNatural )
+unique_HeatShock_DE_transcripts <- unique(CA_DEGlist_HeatShock$transcript_id)
+length(unique_HeatShock_DE_transcripts) # number of uniquely differentially expressed transcripts across heat shock comparisons
+write.csv(unique_HeatShock_DE_transcripts, paste(out_dir, "HeatShock_comparison_DEG_list.csv", sep=""))
+
+CA_DEGlist_LowElev <- rbind(DEGlist_lrt_LowElevControl, DEGlist_lrt_LowElevHeatShock)
+unique_LowElev_DE_transcripts <- unique(AC_DEGlist_LowElev$transcript_id)
+length(unique_LowElev_DE_transcripts) # number of uniquely differentially expressed transcripts across low elevation comparisons
+write.csv(unique_LowElev_DE_transcripts, paste(out_dir, "LowElev_comparison_DEG_list.csv", sep=""))
+
+CA_DEGlist_InteractionHeatShock <- rbind(DEGlist_lrt_HeatShockLowElevVsNatural)
+unique_HeatShockInteract_DE_transcripts <- unique(CA_DEGlist_InteractionHeatShock$transcript_id)
+length(unique_HeatShockInteract_DE_transcripts) # number of uniquely differentially expressed transcripts across heat shock comparisons in low vs natural elev beetles
+write.csv(unique_HeatShockInteract_DE_transcripts, paste(out_dir, "HeatShockInteract_comparison_DEG_list.csv", sep=""))
+
+CA_DEGlist_InteractionLowElev <- rbind(DEGlist_lrt_LowElevHeatvsControl)
+unique_LowElevInteract_DE_transcripts <- unique(CA_DEGlist_InteractionLowElev$transcript_id)
+length(unique_LowElevInteract_DE_transcripts)# number of uniquely differentially expressed transcripts across low elev comparisons in heat shock vs control beetles
+write.csv(unique_LowElevInteract_DE_transcripts, paste(out_dir, "LowElevInteract_comparison_DEG_list.csv", sep=""))
+
+
+
+
+##
 #
-#####
-
-## pH comparisons
-lrt_pH_1 <- glmLRT(fit, coef=2)
-lrt_pH_2 <- glmLRT(fit, coef=3)
-lrt_pH_3 <- glmLRT(fit, contrast=c(0,-1,1))
-
-
-#####
+# Get all the transcripts that were being used (for annotation of less than all the data)
 #
-# Find significantly differentially expressed genes between comparisons
-#
-#####
+##
 
-#####
-# Function: get_DEGs
-# perform LRT (likelihood ratio test) on certain factors
-# returns a data frame that contains both toptags and annotation data
-# arguments:
-#   lrt = glmLRT object of the comparison you're making
-#   annot = transcripts annotation data frame
-#   fdr = false discovery rate (default 0.05)
-#   critFC = a threshold fold change (default 2-fold)
-#   onlyAnnot = flag whether to save only annotated transcripts
-#
-# saves files:
-#   .pdf of the MA plot
-#   .csv file of topTags, filtered by critical FC and onlyAnnot flag
-#   
-#####
-DEG <- summary(decideTestsDGE(lrt_pH_1, p=0.05, adjust="BH"))
+ALL_RKC_transcripts = rownames(lrt_inter_0$table)
+write.table(ALL_RKC_transcripts,"All_RKC_transcriptID.txt", quote=FALSE, row.names=FALSE, col.names=FALSE)
 
-get_DEGs <- function(lrt, annot, fdr=0.05, critFC=2, onlyAnnot=FALSE) {
-  DEG <- summary(decideTestsDGE(lrt, p=fdr, adjust="BH")) # gives numbers of genes up and downregulated at FDR < pval
-  Num_DEG <- (DEG[1] + DEG[-1])[2] # gets total number of DEGs based on the FDR
-  if(Num_DEG==0){
-    cat("There are no statistically significant differences in gene expression")
-    break
-  }
-  tTags <- topTags(lrt, n=Num_DEG) # gets a list of DEGs, "topTags"
-  cp <- unlist(strsplit(tTags$comparison, "[* ]"))
-  comp <- paste(cp[2], "v", cp[4], sep="") # this and the preceding line make a cleaner text format for the "comparison," used in filenames.  This gets  screwed up when you use the glmLRT(fit, coef=4) style instead of the glmLRT(fit, contrast=c(0,0,0,-1,1)) style
-  cat("Comparison:", comp, "\n")
-  cat("Total number of genes:", nrow(lrt$table), "\n")
-  cat("Number of differentially expressed genes with FDR <", fdr, "=", nrow(tTags), "\n")
-  # write an MA Plot .pdf
-  cat("...saving an MAplot:", paste(out_dir,"MAplot_", comp, "_FDR_", fdr, ".pdf", sep=""), "\n" )
-  pdf(file=paste(out_dir,"MAplot_", comp, "_FDR_", fdr, ".pdf", sep=""), height=6, width=6)
-  detags <- rownames(tTags$table) # n= has to be the number of significantly differentially expressed genes
-  plotSmear(lrt,de.tags=detags, cex=0.5) # plot of fold change given CPM, red for those < FDR
-  abline(h=c(-1,1), col="dodgerblue") # blue line at twofold change
-  dev.off()
-  # Merge annotations with DGE stats
-  tTags_frame <- tTags$table # make data frame from tTags
-  tTags_frame$transcript_id <- rownames(tTags_frame)
-  join <- merge(tTags_frame, annot) # gets the intersection of detags and transcripts, i.e., the annotations for the DE transcripts
-  # Some summary stats
-  cat("percent all transcripts with ORFs:", sum(annot$prot_id != ".") * 100 / nrow(annot), "\n")
-  cat("percent toptags with ORFs:", sum(join$prot_id != ".") * 100 / nrow(join), "\n")
-  cat("percent all transcripts with Pfam or BlastX or BlastP annotation:", sum((annot$Pfam != ".") | (annot$Top_BLASTX_hit != ".") | (annot$Top_BLASTP_hit != ".")) * 100 / nrow(annot), "\n")
-  cat("percent toptags with Pfam or BlastX or BlastP annotation:", sum((join$Pfam != ".") | (join$Top_BLASTP_hit != ".") | (join$Top_BLASTX_hit != ".")) * 100 / nrow(join), "\n")
-  cat("number of genes upregulated, (FC > ", critFC, "):", sum(join$logFC > log2(critFC)), "\n")
-  cat("number of genes downregulated, (FC < ", 1/critFC, "):", sum(join$logFC < -log2(critFC)), "\n")
-  join <- join[ abs(join$logFC) > log2(critFC) , ]
-  # write a csv and return the relevant dataframe
-  if(onlyAnnot) {
-    cat("saving .csv of up or downregulated genes, given critical FC, with only annotated sequences:", paste(out_dir, "topTags_", comp, "_", "critFC", critFC, "_", fdr, "FDR_only_w_Annot.csv", sep="" ))
-    write.csv( join[ (join$Pfam != ".") | (join$Top_BLASTX_hit != ".") | (join$Top_BLASTP_hit != ".") , ], file=paste(out_dir, "topTags_", comp, "_", "critFC", critFC, "_", fdr, "FDR_only_w_Annot.csv", sep="" ) )
-    return(join[ (join$Pfam != ".") | (join$Top_BLASTX_hit != ".") | (join$Top_BLASTP_hit != ".") , ])
-  } else {
-    cat("saving .csv of up/downregulated genes, given a critical FC:", paste(out_dir, "topTags_", comp, "_", "critFC", critFC, "_", fdr, "FDR.csv", sep="" ))
-    write.csv( join, file=paste(out_dir, "topTags_", comp, "_", "critFC", critFC, "_", fdr, "FDR.csv", sep="" ) )
-    return(join)    
-  }
-}
-
-# get lists of differentially expressed genes among mothers from each comparison using getDEGs function
-DEGlist_lrt_pH_1 <- get_DEGs(lrt_pH_1, annot=transcripts, fdr=0.01, critFC=2) # no differences
-DEGlist_lrt_pH_2 <- get_DEGs(lrt_pH_2, annot=transcripts, fdr=0.01, critFC=2) # no differences
-DEGlist_lrt_pH_3 <- get_DEGs(lrt_pH_3, annot=transcripts, fdr=0.01, critFC=2) # 46 differences
-
-#RKC4_DEGlist_pH <- rbind(DEGlist_lrt_pH_1, DEGlist_lrt_pH_2, DEGlist_lrt_pH_3)
-#unique_pH_DE_transcripts <- unique(RKC4_DEGlist_pH$transcript_id)
-#length(unique_pH_DE_transcripts) # number of uniquely differentially expressed transcripts across pH comparisons
-write.csv(DEGlist_lrt_pH_3, paste(out_dir, "Day0_pH_comparison_DEG_list.csv", sep=""))
 
 #####
 #
 # write cluster files
 #
 #####
+
 
 write.cluster.file <- function(all_fpkm, unique_DE_transcripts, outfile, cnames) {
   # make matrix of fpkm values using only those transcripts found in all targetList
@@ -722,7 +346,7 @@ write.cluster.file <- function(all_fpkm, unique_DE_transcripts, outfile, cnames)
   # iterate over cloneID in centeredDF, appending each topBlastHit to the blasthits vector
   for (cloneID in centeredDF$CloneID) {
     match <- annot_matches[annot_matches$transcript_id %in% cloneID,]
-    blasthits <- c(blasthits, match$TopBlastHit[1])
+    blasthits <- c(blasthits, match$Top_BLASTX_hit[1])
   }
   # add blasthits vector to centeredDF "NAME" column
   centeredDF$NAME <- blasthits
@@ -732,22 +356,29 @@ write.cluster.file <- function(all_fpkm, unique_DE_transcripts, outfile, cnames)
   write.table(centeredDF, file=outfile, quote=FALSE, row.names=FALSE, sep="\t")
 }
 
-head(DEGlist_lrt_pH_3)
+
+
+unique_pH_DE_transcripts
+unique_temp_DE_transcripts
+unique_all_DE_transcripts
+unique_interact_DE_transcripts
+
 
 # concatenate column names from sample ID and groupings to make the column names more informative
 # function to concatenate names
 concat_name <- function(x){
-  paste(x[1],x[2],x[5],sep="_")
+  paste(x[1],x[2],sep="_")
 }
 
 # make a data frame of the sample ID and groupings
-
-sampleNames <- apply(new.hatch.groups, 1, concat_name)
+sampleDF <- data.frame(sample=colnames(all_fpkm), treatment=group)
+sampleNames <- apply(sampleDF, 1, concat_name)
 sampleNames
 
-larvae_0day_DE_transcripts <- DEGlist_lrt_pH_3$transcript_id
-
-write.cluster.file(all_fpkm[,c(new.hatch.groups$Sample.ID)], larvae_0day_DE_transcripts, paste(out_dir, "Day0_centered_data_pH_comparison.txt", sep=""), sampleNames)
+write.cluster.file(all_fpkm, unique_pH_DE_transcripts, paste(out_dir, "centered_data_pH_comparison.txt", sep=""), sampleNames)
+write.cluster.file(all_fpkm, unique_temp_DE_transcripts, paste(out_dir, "centered_data_temp_comparison.txt", sep=""), sampleNames)
+write.cluster.file(all_fpkm, unique_all_DE_transcripts, paste(out_dir, "centered_data_all_comparison.txt", sep=""), sampleNames)
+write.cluster.file(all_fpkm, unique_interact_DE_transcripts, paste(out_dir, "centered_data_interact_comparison.txt", sep=""), sampleNames)
 
 
 # # sort by logFC
@@ -757,9 +388,22 @@ write.cluster.file(all_fpkm[,c(new.hatch.groups$Sample.ID)], larvae_0day_DE_tran
 # write.csv(annotated_DEGs_pHlow[ abs(annotated_DEGs_pHlow$logFC) > 1 , ], file=paste( out_dir, "topTags_DEGlist_pHlow_FDR0_00001_PfamHits_logFC_greater_than_2.csv", sep="" )
 # 
 
+
+#######
+#
+# Read in DE gene table to redo MDS on just the differentially expressed genes
+#
+#####
+
+newMDSdata=read.delim(file.choose(),sep="\t")
+plotMDS(newMDSdata[,c(3:47)] , main = "MDS Plot of DE genes", labels = group, cex=0.7)
+
+
+
+
 ##########
 #
-# Functions for genewise data analysis: Works!
+# Functions for genewise data analysis
 #
 ##########
 
@@ -770,28 +414,28 @@ write.cluster.file(all_fpkm[,c(new.hatch.groups$Sample.ID)], larvae_0day_DE_tran
 # JS plyr version
 #
 #####
-pH # use as.factor from group file, or make this as a factor
-mom # use as.factor from group file, or make this as a factor
+pH2=pH # use as.factor from group file, or make this as a factor
+Temperature # use as.factor from group file, or make this as a factor
 
 library(plyr)
 library(ggplot2)
 
-gene="comp0_c0_seq1"
+gene="comp102584_c11_seq1"
 
 get_gene_data <- function(gene, all_fpkm) {
-  gene_data <- data.frame(fpkm=as.numeric(all_fpkm[gene,]), pH=pH)
-  fpkm_mean<-ddply(gene_data,.(pH), function(d) mean(d$fpkm)) # if group file has columns called pH 
-  SD<-ddply(gene_data,.(pH), function(d) sd(d$fpkm)) # if group file has columns called pH 
-  names(fpkm_mean)=c("pH","Mean") # rename
-  names(SD)=c("pH","SD") # rename
+  gene_data <- data.frame(fpkm=as.numeric(all_fpkm[gene,]), pH=pH2, Temperature=temp)
+  fpkm_mean<-ddply(gene_data,.(pH2,Temperature), function(d) mean(d$fpkm)) # if group file has columns called pH and Temperature
+  SD<-ddply(gene_data,.(pH2,Temperature), function(d) sd(d$fpkm)) # if group file has columns called pH and Temperature
+  names(fpkm_mean)=c("pH","Temperature","Mean") # rename
+  names(SD)=c("pH","Temperature","SD") # rename
   out_frame=merge(fpkm_mean,SD) #make one data frame
-  out_frame=out_frame[,c(2,3,1)] # reorder columns
+  out_frame=out_frame[,c(3,4,1,2)] # reorder columns
   return(out_frame)
 }
 
-gene_data <- get_gene_data("comp0_c0_seq1", all_fpkm[,c(new.hatch.groups$Sample.ID)])  #the gene in all_fpkm for which data will be returned
+gene_data <- get_gene_data("comp102584_c11_seq1", all_fpkm)  #the gene in all_fpkm for which data will be returned
 
-gene_data
+grep("comp102584_c11_seq1", all_fpkm)
 
 
 
@@ -844,7 +488,7 @@ gene_data
 get_annot <- function(gene_in, annotation) {
   L <- annotation$transcript_id == gene_in
   cat("transcript: ", as.vector(annotation[L,]$transcript_id), "\n")
-  cat("top blast hit: ", as.vector(annotation[L,]$TopBlastHit), "\n")
+  cat("top blast hit: ", as.vector(annotation[L,]$Top_BLASTX_hit ), "\n")
   cat("gene ontology: ", as.vector(annotation[L,]$gene_ontology), "\n")
   cat("PFam: ", as.vector(annotation[L,]$Pfam), "\n")
   cat("Signal Peptide: ", as.vector(annotation[L,]$SignalP), "\n")
@@ -860,11 +504,12 @@ get_annot <- function(gene_in, annotation) {
 # plots fpkm for the specified gene
 #####
 
-plot_genewise_fpkm <- function(gene_in, plot_title, add_title) {
-  k <- ggplot(gene_in, aes( x = pH, y = Mean, ymax = Mean + SD, ymin = Mean - SD, fill = pH ))
-  k + geom_bar(stat="identity")  + geom_errorbar( width = 0.3) + scale_fill_brewer(type="qual", palette="Paired") + labs(title=paste(plot_title, add_title))
-   ggsave(filename = paste(out_dir, plot_title, "_", add_title, "_genewise_FPKM", ".pdf", sep =""), width = 6, height = 6)
-  }
+# plot_genewise_fpkm <- function(gene_in, plot_title, add_title) {
+#   k <- ggplot(gene_in, aes( x = temp_grp, y = fpkm_mean, ymax = fpkm_mean + SD, ymin = fpkm_mean - SD, fill = temp_grp ))
+#   k + geom_bar(stat="identity") + facet_grid( . ~ pH_grp ) + geom_errorbar( width = 0.3) + scale_fill_brewer(type="qual", palette="Paired") + labs(title=paste(plot_title, add_title))
+#   k + geom_bar(stat="identity") + facet_grid( . ~ pH_grp ) + geom_errorbar( width = 0.3) + scale_fill_brewer(type="qual", palette="Paired") + labs(title=paste(plot_title, add_title))
+#   ggsave(filename = paste(out_dir, plot_title, "_", add_title, "_genewise_FPKM", ".pdf", sep =""), width = 6, height = 6)
+#   }
 
 # test plotting fpkm data
 #plot_genewise_fpkm(gene_data, "titleA", "titleB")
@@ -874,11 +519,11 @@ plot_genewise_fpkm <- function(gene_in, plot_title, add_title) {
 # makes an interaction plot for a given gene
 #####
 
-# plot_interaction <- function(gene_data, plot_title, add_title) {
-#   h <- ggplot(gene_data, aes(x = pH, y = Mean, ymax = Mean + SD, ymin = Mean - SD, color=Mom))
-#   h + geom_errorbar(color="black", width=0.1) + geom_point(aes(shape=Mom), color="black",size = 6) + geom_line(aes(group=Mom), size=0.5, linetype=1) + labs(title=paste(plot_title, add_title), x = "pH treatment", y = "mean FPKM") + scale_color_manual(values=c("#3399FF", "#66CC00", "#CC0066"))
-#   ggsave(filename = paste(out_dir, plot_title, "_", add_title, "_interactionPlot_FPKM", ".pdf", sep =""), width = 6, height = 6)
-# }
+plot_interaction <- function(gene_data, plot_title, add_title) {
+  h <- ggplot(gene_data, aes(x = pH, y = Mean, ymax = Mean + SD, ymin = Mean - SD, color=Temperature, fill=Temperature))
+  h + geom_errorbar(color="black", width=0.1) + geom_point(aes(shape=Temperature, fill=Temperature),size = 4) + geom_line(aes(group=Temperature), size=0.5, linetype=1) + labs(title=paste(plot_title, add_title), x = "pH treatment", y = "mean FPKM") + scale_color_manual(values=c("#3399FF", "#66CC00", "#CC0066"))
+  ggsave(filename = paste(out_dir, plot_title, "_", add_title, "_interactionPlot_FPKM", ".pdf", sep =""), width = 6, height = 6)
+  }
 
 #plot_interaction(gene_data,"TITLEA","TITLEB")
 #####
@@ -892,12 +537,12 @@ plot_genewise_fpkm <- function(gene_in, plot_title, add_title) {
 GOI_data <- function(gene_name, annotation, fpkm_table, graph_title) {
   gene_data <- get_gene_data(gene_name, fpkm_table)
   get_annot(gene_name, annotation)
-  plot_genewise_fpkm(gene_data, gene_name, graph_title)
-  #plot_interaction(gene_data, gene_name, graph_title)
+  #plot_genewise_fpkm(gene_data, gene_name, graph_title)
+  plot_interaction(gene_data, gene_name, graph_title)
 }
 
 # generate genewise plots based on a gene of interest
-GOI_data("comp100107_c0_seq1", transcripts, all_fpkm[,c(new.hatch.groups$Sample.ID)], "Carbonic Anhydrase")
+GOI_data("comp100107_c0_seq1", transcripts, all_fpkm, "Carbonic Anhydrase")
 
 ###
 #
@@ -907,7 +552,163 @@ GOI_data("comp100107_c0_seq1", transcripts, all_fpkm[,c(new.hatch.groups$Sample.
 
 desired_graphs = read.csv(file.choose())  #a text file with two columns, the geneID (gene_name) and a descriptor (graph_title)
 
+outdir = "/Users/jonathonstillman/Documents/RKC_Transcriptomics/RKC2_Juveniles/GOIplots_temperature/"
+
 for (i in 1:nrow(desired_graphs)) {
-  GOI_data(desired_graphs[i,1], transcripts, all_fpkm[,-c(1:8)], desired_graphs[i,2])
+  GOI_data(desired_graphs[i,1], transcripts, all_fpkm, desired_graphs[i,2])
 }
 
+
+
+###########
+#
+# Functions for plotting clusters as interactions plots.
+#
+############
+
+# read in the clustered median-centered log-2 FPKM data (from the .cdt file made by Cluster 3.0 software).  The file has had the E-weights removed, a column of clusters added, and saved as a .csv
+
+clustereddata=read.csv(file.choose())
+
+# prepare data for plotting using reshape
+library(reshape)
+clusterdata2=melt(clustereddata[,c(3:48)],id.var=c("Cluster"))
+library(plyr)
+library(ggplot2)
+head(clusterdata2)
+clusterdata2$group = substr(clusterdata2$variable,1,6)
+
+
+Mean_by_cluster<-ddply(clusterdata2,.(Cluster,variable), function(d) mean(d$value)) # if group file has columns called pH and Temperature
+sd_by_cluster<-ddply(clusterdata2,.(Cluster,variable), function(d) sd(d$value)) # if group file has columns called pH and Temperature
+names(Mean_by_cluster)=c("cluster","group","Mean") # rename
+names(sd_by_cluster)=c("cluster","group","SD") # rename
+plotting_data_by_cluster=merge(Mean_by_cluster,sd_by_cluster) #make one data frame
+
+#REDO WITH PROPER GLOBAL STANDARD DEVIATION AND STANDARD ERROR + 1.98*SE (95% conf. int.)
+
+head(plotting_data_by_cluster)
+pHbyCluster=c(rep(c(rep("8.0",5),rep("7.5",5),rep("8.0",5),rep("7.5",5),rep("7.8",5),rep("8.0",5),rep("7.8",5),rep("7.5",5),rep("7.8",5)),6))
+TempbyCluster=c(rep(c(rep("13",5),rep("11",5),rep("11",5),rep("14",5),rep("13",5),rep("14",5),rep("14",5),rep("13",5),rep("11",5)),6))
+Library_cluster_plot=c(rep(c(rep("A",5),rep("B",5),rep("C",5),rep("D",5),rep("E",5),rep("F",5),rep("G",5),rep("H",5),rep("J",5)),6))
+new_plotting_data_by_cluster=cbind(plotting_data_by_cluster,pHbyCluster,TempbyCluster,Library_cluster_plot)
+names(new_plotting_data_by_cluster)=c("Cluster","Library","Mean","SD","pH","Temperature","Group")
+head(new_plotting_data_by_cluster)
+
+# new plot data with data averaged per group at each pH and Temperature and cluster
+new_plotting_data_by_cluster_avgd<-ddply(clusterdata2,.(Cluster,group), function(d) mean(d$value)) # if group file has columns called pH and Temperature
+sd_by_cluster_avgd<-ddply(clusterdata2,.(Cluster,group), function(d) sd(d$value)) # if group file has columns called pH and Temperature
+library(plotrix)
+se_by_cluster_avgd<-ddply(clusterdata2,.(Cluster,group), function(d) std.error(d$value)) 
+head(new_plotting_data_by_cluster_avgd)
+names(new_plotting_data_by_cluster_avgd)=c("Cluster","Group","Mean") # rename
+names(sd_by_cluster_avgd)=c("Cluster","Group","SD") # rename
+names(se_by_cluster_avgd)=c("Cluster","Group","SE")
+plotting_data_by_cluster_avgd=merge(new_plotting_data_by_cluster_avgd,sd_by_cluster_avgd)
+plotting_data_by_cluster_avgd=merge(plotting_data_by_cluster_avgd,se_by_cluster_avgd)
+plotting_data_by_cluster_avgd$pct=plotting_data_by_cluster_avgd$SE*1.98
+#make one 
+head(plotting_data_by_cluster_avgd)
+plotting_data_by_cluster_avgd$pH = c(rep(c(rep("8.1",3),rep("7.5",3),rep("7.8",3))))
+plotting_data_by_cluster_avgd$Temperature = c(rep(c("10.5","12.5","14.5"),3))
+head(plotting_data_by_cluster_avgd)
+
+#plot with SD
+c <- ggplot(plotting_data_by_cluster_avgd, aes(x = pH, y = Mean, ymax = Mean + SD, ymin = Mean - SD, color=Temperature, fill=Temperature,group=Group))
+c + geom_errorbar(color="black", width=0.1) + geom_point(aes(shape=Temperature, fill=Temperature),size = 4) + geom_line(aes(group=Temperature), size=0.5, linetype=1) + labs(title="Clusters (error bars are 1SD)",x = "pH treatment", y = "Median centered log2 FPKM") + scale_color_manual(values=c("#3399FF", "#66CC00", "#CC0066"))+facet_grid(~Cluster)
+
+#plot with SEM
+d <- ggplot(plotting_data_by_cluster_avgd, aes(x = pH, y = Mean, ymax = Mean + SE, ymin = Mean - SE, color=Temperature, fill=Temperature,group=Group))
+d + geom_errorbar(color="black", width=0.1) + geom_point(aes(shape=Temperature, fill=Temperature),size = 4) + geom_line(aes(group=Temperature), size=0.5, linetype=1) + labs(title="Clusters (error bars are 1SEM)",x = "pH treatment", y = "Median centered log2 FPKM") + scale_color_manual(values=c("#3399FF", "#66CC00", "#CC0066"))+facet_grid(~Cluster)
+
+#plot with 95% conf intervals
+e <- ggplot(plotting_data_by_cluster_avgd, aes(x = pH, y = Mean, ymax = Mean + pct, ymin = Mean - pct, color=Temperature, fill=Temperature,group=Group))
+e + geom_errorbar(color="black", width=0.1) + geom_point(aes(shape=Temperature, fill=Temperature),size = 3) + geom_line(aes(group=Temperature), size=0.5, linetype=1) + labs(title="Juvenile Cluster 7 (error bars are 95% conf. intervals)",x = "pH treatment", y = "Median centered log2 FPKM") + scale_color_manual(values=c("#3399FF", "#66CC00", "#CC0066"))+theme_bw()#+facet_grid(~Cluster)
+
+## NOW - do a 2-way ANOVA (pH and T) for each Cluster with TUKEY HSD for PW comparisions
+# subset the data by cluster
+Cluster1_data=subset(clusterdata2,clusterdata2$Cluster==1)
+Cluster1_data$pH = substr(Cluster1_data$group,1,3)
+Cluster1_data$Temperature = substr(Cluster1_data$group,4,5)
+
+Cluster2_data=subset(clusterdata2,clusterdata2$Cluster==2)
+Cluster2_data$pH = substr(Cluster2_data$group,1,3)
+Cluster2_data$Temperature = substr(Cluster2_data$group,4,5)
+
+Cluster3_data=subset(clusterdata2,clusterdata2$Cluster==3)
+Cluster3_data$pH = substr(Cluster3_data$group,1,3)
+Cluster3_data$Temperature = substr(Cluster3_data$group,4,5)
+
+Cluster4_data=subset(clusterdata2,clusterdata2$Cluster==4)
+Cluster4_data$pH = substr(Cluster4_data$group,1,3)
+Cluster4_data$Temperature = substr(Cluster4_data$group,4,5)
+
+Cluster5_data=subset(clusterdata2,clusterdata2$Cluster==5)
+Cluster5_data$pH = substr(Cluster5_data$group,1,3)
+Cluster5_data$Temperature = substr(Cluster5_data$group,4,5)
+
+Cluster6_data=subset(clusterdata2,clusterdata2$Cluster==6)
+Cluster6_data$pH = substr(Cluster6_data$group,1,3)
+Cluster6_data$Temperature = substr(Cluster6_data$group,4,5)
+
+# perform ANOVA for each cluster to ID genes that differed by group.
+Cluster1AOV=aov(value~pH*Temperature, data=Cluster1_data)
+TukeyHSD(Cluster1AOV)
+write.csv(HSD1$`pH:Temperature`,"TukeyHSD1.csv")
+Cluster2AOV=aov(value~pH*Temperature, data=Cluster2_data)
+HSD2= TukeyHSD(Cluster2AOV)
+write.csv(HSD2$`pH:Temperature`,"TukeyHSD2.csv")
+Cluster3AOV=aov(value~pH*Temperature, data=Cluster3_data)
+HSD3= TukeyHSD(Cluster3AOV)
+write.csv(HSD3$`pH:Temperature`,"TukeyHSD3.csv")
+Cluster4AOV=aov(value~pH*Temperature, data=Cluster4_data)
+HSD4= TukeyHSD(Cluster4AOV)
+write.csv(HSD4$`pH:Temperature`,"TukeyHSD4.csv")
+Cluster5AOV=aov(value~pH*Temperature, data=Cluster5_data)
+HSD5= TukeyHSD(Cluster5AOV)
+write.csv(HSD5$`pH:Temperature`,"TukeyHSD5.csv")
+Cluster6AOV=aov(value~pH*Temperature, data=Cluster6_data)
+HSD6= TukeyHSD(Cluster6AOV)
+write.csv(HSD6$`pH:Temperature`,"TukeyHSD6.csv")
+
+
+#######
+#
+# Make a table with specific gene text (e.g., "resilin")
+#
+#######
+
+#subset the data to make a new table just containing text string.
+resilindata=subset(newMDSdata, regexpr("resilin", newMDSdata$NAME) > 0)
+
+cuticledata=subset(newMDSdata, regexpr("cuticle", newMDSdata$NAME) > 0)
+library(reshape)
+resilindatamelt=melt(resilindata,id.vars="CloneID",measure.vars=c(resilindata[3,47]))
+resilindatamelt=melt(resilindata)
+colnames(resilindata)
+pHlong=c(rep("8.0",255),rep("7.5",255),rep("8.0",255),rep("7.5",255),rep("7.8",255),rep("8.0",255),rep("7.8",255),rep("7.5",255),rep("7.8",255))
+Templong=c(rep("13",255),rep("11",255),rep("11",255),rep("14",255),rep("13",255),rep("14",255),rep("14",255),rep("13",255),rep("11",255))
+
+resilindataplot=cbind(resilindatamelt,pHlong,Templong)
+head(resilindataplot)
+library(plyr)
+library(ggplot2)
+Mean<-ddply(resilindataplot,.(pHlong,Templong), function(d) mean(d$value)) # if group file has columns called pH and Temperature
+sd<-ddply(resilindataplot,.(pHlong,Templong), function(d) sd(d$value)) # if group file has columns called pH and Temperature
+names(Mean)=c("pH","Temperature","Mean") # rename
+names(sd)=c("pH","Temperature","SD") # rename
+plotting_data=merge(Mean,sd) #make one data frame
+plotting_data$pH = c(rep(7.5,3),rep(7.8,3),rep(8.0,3))
+a <- ggplot(plotting_data, aes(x = pH, y = Mean, ymax = Mean + SD, ymin = Mean - SD, color=Temperature, fill=Temperature))
+a + geom_errorbar(color="black", width=0.02) + geom_point(aes(shape=Temperature, fill=Temperature),size = 4) + geom_line(aes(group=Temperature), size=0.5, linetype=1) + labs(title="all pro-resilins",x = "pH treatment", y = "mean FPKM") + scale_color_manual(values=c("#3399FF", "#66CC00", "#CC0066"))+scale_x_continuous(breaks=c(7.5,7.8,8.0))
+
+
+## make an interaction plot of the unclustered cluster:
+unclustdata=read.csv(file.choose())
+# prepare data for plotting using reshape
+library(reshape)
+clusterdata2=melt(unclustdata[,c(3:48)],id.var=c("Cluster"))
+library(plyr)
+library(ggplot2)
+clusterdata2$group = substr(clusterdata2$variable,1,6)
+head(clusterdata2)
