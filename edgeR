@@ -1,10 +1,3 @@
-#!/usr/bin/R
-
-# Scott Fay 
-# 2013 Oct 15
-# updated 10 April 2014
-
-
 # to install packages ggplot2 and edgeR:
 # install.packages("ggplot2")
 # if (!requireNamespace("BiocManager", quietly = TRUE))
@@ -18,6 +11,8 @@ BiocManager::install("edgeR")
 #load packages
 library(ggplot2)
 library(edgeR)
+library(dplyr)
+library(tidyr)
 
 #####
 #
@@ -113,7 +108,6 @@ boxplot(log2(filtered.all.count+1), las=2) # after filter
 # Drop any poor quality libraries IF NEEDED
 #
 #####
-
 drops <- c("","")  # list the library names to be removed here
 filtered.all.count <- filtered.all.count[,!(names(filtered.all.count) %in% drops)]
 all_tpm <- all_tpm[,!(names(all_tpm) %in% drops)]
@@ -131,14 +125,14 @@ boxplot(log2(filtered.all.count+1), las=2) # visualize again
 #
 ##########
 
-#The combined factor method = design
+#The combined factor method = design ...the method I used due to my experimental design
 ElevTempGroups <- factor(paste(Rearing_Elevation,Treatment, sep=".")
 # DGEList makes an EdgeR object
 y <- DGEList(counts=all_count, group=ElevTempGroups) # group is Rearing_Elevation and Treatment
 design <- model.matrix(~0+ElevTempGroups, data=y$samples) # crossed design, same as (~Rearing_Elevation + Treatment + Rearing_Elevation:Treatment ... see section 3.3.4 in edgeR documentation, and double check this meaning with a statistician
 colnames(design) <- levels(ElevTempGroups)
 
-#The single factor method = design2
+#The single factor method = design2 ...another method that COULD be used if experimental design allows, but must pick ONE
 ElevTempGroups <- factor(paste(Rearing_Elevation,Treatment, sep=".")
 # DGEList makes an EdgeR object
 y2 <- DGEList(counts=all_count, group=ElevTempGroups) # group is Rearing_Elevation and Treatment
@@ -164,7 +158,11 @@ dev.off()
 plotMDS(y , main = "MDS Plot for Count Data", labels = colnames( y$counts ), cex=0.5)
 # make a pdf
 pdf(file=paste(out_dir, "MDS_plot.pdf", sep=""), height=6, width=6)
-plotMDS(y , main = "MDS Plot for Count Data", labels = group, cex=0.5)
+plotMDS(y , main = "MDS Plot for Count Data", labels = ElevTempGroups, cex=0.5)
+dev.off()
+
+pdf(file=paste(out_dir, "MDS_plotGenotype.pdf", sep=""), height=6, width=6)
+plotMDS(y , main = "MDS Plot for Count Data", labels = MitonuclearGroup, cex=0.5)
 dev.off()
 
 boxplot(log2(y$counts+1), cex.lab=0.5, cex.axis=0.7, las=2, main="After filter") # before filter
@@ -175,8 +173,9 @@ boxplot(log2(y$counts+1), cex.lab=0.5, cex.axis=0.7, las=2, main="After filter")
 #####
 
 # fit the negative binomial generalized linear model (GLM) for each tag, creating a new fit object
-fit <- glmQLFit(y, design)
+fit <- glmFit(y, design)
 colnames(fit)
+
 # make contrasts
 my.contrasts <- makeContrasts(
 HeatShockNatural = NaturalElev.HeatTreat - NaturalElev.Control, #effect of heat shock in natural elevation reared beetles
@@ -187,17 +186,6 @@ LowElevandHeat = LowElev.HeatTreat - NaturalElev.Control, #effect of low elevati
 LowElevHeatvsControl = (LowElev.HeatTreat - NaturalElev.HeatTreat) - (LowElev.Control - NaturalElev.Control), #genes that respond differently to low elevation rearing in heat shock vs control temp beetles 
 HeatShockLowElevVsNatural = (LowElev.HeatTreat - LowElev.Control) - (NaturalElev.HeatTreat - NaturalElev.Control), #genes that respond differently to heat shock in low elevation vs natural elevation reared beetles 
 levels=design)
-
-# perform likelihood ratio tests for various comparisons, generating QLF object for each
-
-### QLF interaction term comparisons
-qlf_HeatShockNatural <- glmQLFTest(fit, contrast=my.contrasts[,"HeatShockNatural"])
-qlf_HeatShockLow <- glmQLFTest(fit, contrast=my.contrasts[,"HeatShockLow"])
-qlf_LowElevControl <- glmQLFTest(fit, contrast=my.contrasts[,"LowElevControl"])
-qlf_LowElevHeatShock <- glmQLFTest(fit, contrast=my.contrasts[,"LowElevHeatShock"])
-qlf_LowElevandHeat <- glmQLFTest(fit, contrast=my.contrasts[,"HeatShockNatural"])
-qlf_LowElevHeatvsControl <- glmQLFTest(fit, contrast=my.contrasts[,"LowElevHeatvsControl"])
-qlf_HeatShockLowElevVsNatural <- glmQLFTest(fit, contrast=my.contrasts[,"HeatShockLowElevVsNatural"])
 
 # perform likelihood ratio tests for various comparisons, generating LRT object for each
 
@@ -284,9 +272,7 @@ DEGlist_lrt_LowElevControl <- get_DEGs(lrt_LowElevControl, annot=transcripts, fd
 DEGlist_lrt_LowElevHeatShock <- get_DEGs(lrt_LowElevHeatShock, annot=transcripts, fdr=0.01, critFC=2)
 DEGlist_lrt_LowElevHeatvsControl <- get_DEGs(lrt_LowElevHeatvsControl, annot=transcripts, fdr=0.01, critFC=2)
 
-#####
-##Combining the LRT's to get DEG##
-#####
+###get the combined unique DEG lists for Temperature comparisons, Elevation comparisons, and ALL comparisons
 
 CA_DEGlist_HeatShock <- rbind(DEGlist_lrt_HeatShockLow,DEGlist_lrt_HeatShockNatural )
 unique_HeatShock_DE_transcripts <- unique(CA_DEGlist_HeatShock$transcript_id)
@@ -294,50 +280,45 @@ length(unique_HeatShock_DE_transcripts) # number of uniquely differentially expr
 write.csv(unique_HeatShock_DE_transcripts, paste(out_dir, "HeatShock_comparison_DEG_list.csv", sep=""))
 
 CA_DEGlist_LowElev <- rbind(DEGlist_lrt_LowElevControl, DEGlist_lrt_LowElevHeatShock)
-unique_LowElev_DE_transcripts <- unique(AC_DEGlist_LowElev$transcript_id)
+unique_LowElev_DE_transcripts <- unique(CA_DEGlist_LowElev$transcript_id)
 length(unique_LowElev_DE_transcripts) # number of uniquely differentially expressed transcripts across low elevation comparisons
 write.csv(unique_LowElev_DE_transcripts, paste(out_dir, "LowElev_comparison_DEG_list.csv", sep=""))
 
-CA_DEGlist_InteractionHeatShock <- rbind(DEGlist_lrt_HeatShockLowElevVsNatural)
-unique_HeatShockInteract_DE_transcripts <- unique(CA_DEGlist_InteractionHeatShock$transcript_id)
-length(unique_HeatShockInteract_DE_transcripts) # number of uniquely differentially expressed transcripts across heat shock comparisons in low vs natural elev beetles
-write.csv(unique_HeatShockInteract_DE_transcripts, paste(out_dir, "HeatShockInteract_comparison_DEG_list.csv", sep=""))
-
-CA_DEGlist_InteractionLowElev <- rbind(DEGlist_lrt_LowElevHeatvsControl)
-unique_LowElevInteract_DE_transcripts <- unique(CA_DEGlist_InteractionLowElev$transcript_id)
-length(unique_LowElevInteract_DE_transcripts)# number of uniquely differentially expressed transcripts across low elev comparisons in heat shock vs control beetles
-write.csv(unique_LowElevInteract_DE_transcripts, paste(out_dir, "LowElevInteract_comparison_DEG_list.csv", sep=""))
+CA_DEGlist_all <- rbind(DEGlist_lrt_HeatShockLow, DEGlist_lrt_HeatShockLowElevVsNatural, DEGlist_lrt_HeatShockNatural, DEGlist_lrt_LowElevandHeat, DEGlist_lrt_LowElevControl, DEGlist_lrt_LowElevHeatShock, DEGlist_lrt_LowElevHeatvsControl)
+unique_all_DE_transcripts <- unique(CA_DEGlist_all$transcript_id)
+length(unique_all_DE_transcripts) # number of uniquely differentially expressed transcripts across temp comparisons
+write.csv(unique_all_DE_transcripts, paste(out_dir, "all_comparison_DEG_list.csv", sep=""))
 
 #
 ##
-###LRT list for EACH contrast###
+### Now get unique DGEList for EACH contrast###
 ###
 ##
 #
 
 unique_HeatShock_Low_DE_transcripts <- unique(DEGlist_lrt_HeatShockLow$transcript_id)
 length(unique_HeatShock_Low_DE_transcripts) # number of uniquely differentially expressed transcripts across heat shock low elev 
-write.csv(unique_HeatShock_Low_DE_transcripts, paste(out_dir, "HeatShock_Low_comparison_DEG_list.csv", sep=""))
+write.csv(unique_HeatShock_Low_DE_transcripts, paste(out_dir, "HeatShock_Low_DEG_list.csv", sep=""))
 
 unique_HeatShock_Natural_DE_transcripts <- unique(DEGlist_lrt_HeatShockNatural$transcript_id)
 length(unique_HeatShock_Natural_DE_transcripts) # number of uniquely differentially expressed transcripts across heat shock nat elev 
-write.csv(unique_HeatShock_Natural_DE_transcripts, paste(out_dir, "HeatShock_Natural_comparison_DEG_list.csv", sep=""))
+write.csv(unique_HeatShock_Natural_DE_transcripts, paste(out_dir, "HeatShock_Natural_DEG_list.csv", sep=""))
 
 unique_LowElev_Control_DE_transcripts <- unique(DEGlist_lrt_LowElevControl$transcript_id)
 length(unique_LowElev_Control_DE_transcripts) # number of uniquely differentially expressed transcripts across low elevation control
-write.csv(unique_LowElev_Control_DE_transcripts, paste(out_dir, "LowElev_Control_comparison_DEG_list.csv", sep=""))
+write.csv(unique_LowElev_Control_DE_transcripts, paste(out_dir, "LowElev_Control_DEG_list.csv", sep=""))
 
 unique_LowElev_HeatShock_DE_transcripts <- unique(DEGlist_lrt_LowElevHeatShock$transcript_id)
 length(unique_LowElev_HeatShock_DE_transcripts) # number of uniquely differentially expressed transcripts across low elevation heat shock
-write.csv(unique_LowElev_HeatShock_DE_transcripts, paste(out_dir, "LowElev_HeatShock_comparison_DEG_list.csv", sep=""))
+write.csv(unique_LowElev_HeatShock_DE_transcripts, paste(out_dir, "LowElev_HeatShock_DEG_list.csv", sep=""))
 
-unique_HeatShockLowElevvsNatural_DE_transcripts <- unique(DEGlist_lrt_HeatShockLowElevVsNatural$transcript_id)
-length(unique_HeatShockInteract_DE_transcripts) # number of uniquely differentially expressed transcripts across heat shock comparisons in low vs natural elev beetles
-write.csv(unique_HeatShockInteract_DE_transcripts, paste(out_dir, "unique_HeatShockInteract_DE_transcripts.csv", sep=""))
+unique_HeatShockLowElevVsNatural_DE_transcripts <- unique(DEGlist_lrt_HeatShockLowElevVsNatural$transcript_id)
+length(unique_HeatShockLowElevVsNatural_DE_transcripts) # number of uniquely differentially expressed transcripts across heat shock comparisons in low vs natural elev beetles
+write.csv(unique_HeatShockLowElevVsNatural_DE_transcripts, paste(out_dir, "unique_HeatShockLowElevVsNatural_DE_transcripts", sep=""))
 
 unique_LowElevHeatvsControl_DE_transcripts <- unique(DEGlist_lrt_LowElevHeatvsControl$transcript_id)
-length(unique_LowElevInteract_DE_transcripts)# number of uniquely differentially expressed transcripts across low elev comparisons in heat shock vs control beetles
-write.csv(unique_LowElevInteract_DE_transcripts, paste(out_dir, "unique_LowElevInteract_DE_transcripts.csv", sep=""))
+length(unique_LowElevHeatvsControl_DE_transcripts)# number of uniquely differentially expressed transcripts across low elev comparisons in heat shock vs control beetles
+write.csv(unique_LowElevHeatvsControl_DE_transcripts, paste(out_dir, "unique_LowElevHeatvsControl_DE_transcripts", sep=""))
 
 unique_LowElevandHeat_DE_transcripts <- unique(DEGlist_lrt_LowElevandHeat$transcript_id)
 length(unique_LowElevandHeat_DE_transcripts)# number of uniquely differentially expressed transcripts across low elev comparisons in heat shock vs control beetles
@@ -352,7 +333,7 @@ write.csv(unique_LowElevandHeat_DE_transcripts, paste(out_dir, "unique_LowElevan
 ##
 
 ?????ALL_CA_transcripts = rownames(lrt_inter_0$table)??????
-write.table(ALL_CA_transcripts,"All_CA_transcriptID.txt", quote=FALSE, row.names=FALSE, col.names=FALSE)
+  write.table(ALL_CA_transcripts,"All_CA_transcriptID.txt", quote=FALSE, row.names=FALSE, col.names=FALSE)
 
 
 #####
@@ -394,7 +375,11 @@ write.cluster.file <- function(all_tpm, unique_DE_transcripts, outfile, cnames) 
   write.table(centeredDF, file=outfile, quote=FALSE, row.names=FALSE, sep="\t")
 }
 
-
+#broad DGE lists I want to make cluster files for
+unique_all_DE_transcripts
+unique_HeatShock_DE_transcripts
+unique_LowElev_DE_transcripts
+#smaller lists
 unique_HeatShock_Low_DE_transcripts
 unique_HeatShock_Natural_DE_transcripts
 unique_LowElev_Control_DE_transcripts
@@ -414,15 +399,27 @@ sampleDF <- data.frame(sample=colnames(all_tpm), treatment=ElevTempGroups)
 sampleNames <- apply(sampleDF, 1, concat_name)
 sampleNames
 
+#the cluster files we want
+write.cluster.file(all_tpm, unique_HeatShock_DE_transcripts, paste(out_dir, "centered_data_AllHeatShock.txt", sep=""), sampleNames)
+write.cluster.file(all_tpm, unique_LowElev_DE_transcripts, paste(out_dir, "centered_data_AllLowElev.txt", sep=""), sampleNames)
+write.cluster.file(all_tpm, unique_all_DE_transcripts, paste(out_dir, "centered_data_AllDEGs.txt", sep=""), sampleNames)
+
+#OPTIONAL cluster files you can make for extra work or fun
 write.cluster.file(all_tpm, unique_HeatShock_Low_DE_transcripts, paste(out_dir, "centered_data_HeatShock_Low.txt", sep=""), sampleNames)
 write.cluster.file(all_tpm, unique_HeatShock_Natural_DE_transcripts, paste(out_dir, "centered_data_HeatShock_Natural.txt", sep=""), sampleNames)
 write.cluster.file(all_tpm, unique_LowElev_Control_DE_transcripts, paste(out_dir, "centered_data_LowElev_Control.txt", sep=""), sampleNames)
 write.cluster.file(all_tpm, unique_LowElev_HeatShock_DE_transcripts, paste(out_dir, "centered_data_LowElev_HeatShock.txt", sep=""), sampleNames)
-write.cluster.file(all_tpm, unique_HeatShockLowElevvsNatural_DE_transcripts, paste(out_dir, "centered_data_HeatShockLowElevvsNatural.txt", sep=""), sampleNames)
+write.cluster.file(all_tpm, unique_HeatShockLowElevVsNatural_DE_transcripts, paste(out_dir, "centered_data_HeatShockLowElevvsNatural.txt", sep=""), sampleNames)
 write.cluster.file(all_tpm, unique_LowElevHeatvsControl_DE_transcripts, paste(out_dir, "centered_data_LowElevHeatvsControl.txt", sep=""), sampleNames)
 write.cluster.file(all_tpm, unique_LowElevandHeat_DE_transcripts, paste(out_dir, "centered_data_LowElevandHeat.txt", sep=""), sampleNames)
 
-
+##
+#
+# Get all the transcripts that were being used (for annotation of less than all the data)?????????????????????????????
+#I'm unsure what this will be used for right now and if it's formatted properly
+##
+?????ALL_CA_transcripts = rownames(lrt_inter_0$table)??????
+write.table(ALL_CA_transcripts,"All_CA_transcriptID.txt", quote=FALSE, row.names=FALSE, col.names=FALSE)
 
 # # sort by logFC
 # sorted_tags <- annotated_DEGs_pHlow[with(annotated_DEGs_pHlow, order(logFC)), ]
@@ -430,6 +427,188 @@ write.cluster.file(all_tpm, unique_LowElevandHeat_DE_transcripts, paste(out_dir,
 # # write a .csv based on a threshold FC, in this case, ( FC < 0.5 ) and ( FC > 2 )
 # write.csv(annotated_DEGs_pHlow[ abs(annotated_DEGs_pHlow$logFC) > 1 , ], file=paste( out_dir, "topTags_DEGlist_pHlow_FDR0_00001_PfamHits_logFC_greater_than_2.csv", sep="" )
 # 
+
+#read in the .txt files for clustering in R
+LowElevHeatvsControlCentered <- read.delim("~/DGE_analysis_output/centered_data_LowElevHeatvsControl.txt",stringsAsFactors=FALSE)
+AllHeatShockCentered <- read.delim("~/DGE_analysis_output/centered_data_AllHeatShock.txt",stringsAsFactors=FALSE)
+AllDEGsCentered <- read.delim("~/DGE_analysis_output/centered_data_AllDEGs.txt",stringsAsFactors=FALSE)
+
+###
+###GGPLOT###
+###
+
+#Gather all of the columns that represent each library and put them into one column "Library", name the resulting values column containing the TPM data for each library "LogTPM"
+tpmDF <- gather(HeatShockCentered, "Library", "logTPM", 3:98)
+LowEHeatvControltpmDF <- gather(LowElevHeatvsControlCentered, "Library", "logTPM", 3:98)
+AllHeatShocktpmDF <- gather(AllHeatShockCentered, "Library", "logTPM", 3:98)
+
+
+#Create Genotype character for column in "long" gene expression data frame, repeating each genotype 1,130 times for the 1,130 transcripts
+Genotype <- rep(c("GA.BP", "GA.BP", "GA.BP", "GG.BP", "AA.BP", "GG.BP", "GA.BP", "GA.BP", "GA.RC", "GG.RC", "AA.BP", "AA.BP", "GA.RC", "GA.RC", "GA.RC", "GG.RC", "GA.BP", "AA.RC", "GA.RC",
+      "GG.RC", "GA.RC", "AA.BP", "GG.BP", "GG.RC", "GG.RC", "AA.RC", "GG.RC", "AA.BP", "GG.BP", "GA.RC", "GG.BP", "GG.BP", "GA.RC", "GA.RC", "GA.RC", "GA.BP", "GA.RC", "GG.RC",
+      "GG.RC", "AA.BP", "GA.RC", "GA.BP", "GG.RC", "AA.BP", "AA.BP", "GA.RC", "GG.RC", "GG.RC", "GA.BP", "AA.RC", "AA.BP", "AA.BP", "GG.RC", "AA.RC", "GA.RC", "GG.RC", "GG.BP",
+      "GG.BP", "GA.BP", "GG.BP", "GG.BP", "AA.BP", "GG.RC", "GG.BP", "GA.RC", "GG.RC", "GA.BP", "GA.BP", "GA.BP", "GG.BP", "GA.BP", "GA.BP", "GA.BP", "AA.RC", "GA.BP", "GG.RC",
+      "AA.BP", "GG.RC", "GG.BP", "AA.RC", "GA.RC", "GA.RC", "AA.BP", "GG.RC", "GA.BP", "AA.RC", "GA.RC", "AA.BP", "GG.BP", "AA.BP", "AA.BP", "GA.BP", "GA.BP", "GA.BP", "GG.BP",
+      "GG.BP"), each = 1130)
+GenotypeLowHeatvsCont <- rep(c("GA.BP", "GA.BP", "GA.BP", "GG.BP", "AA.BP", "GG.BP", "GA.BP", "GA.BP", "GA.RC", "GG.RC", "AA.BP", "AA.BP", "GA.RC", "GA.RC", "GA.RC", "GG.RC", "GA.BP", "AA.RC", "GA.RC",
+                  "GG.RC", "GA.RC", "AA.BP", "GG.BP", "GG.RC", "GG.RC", "AA.RC", "GG.RC", "AA.BP", "GG.BP", "GA.RC", "GG.BP", "GG.BP", "GA.RC", "GA.RC", "GA.RC", "GA.BP", "GA.RC", "GG.RC",
+                  "GG.RC", "AA.BP", "GA.RC", "GA.BP", "GG.RC", "AA.BP", "AA.BP", "GA.RC", "GG.RC", "GG.RC", "GA.BP", "AA.RC", "AA.BP", "AA.BP", "GG.RC", "AA.RC", "GA.RC", "GG.RC", "GG.BP",
+                  "GG.BP", "GA.BP", "GG.BP", "GG.BP", "AA.BP", "GG.RC", "GG.BP", "GA.RC", "GG.RC", "GA.BP", "GA.BP", "GA.BP", "GG.BP", "GA.BP", "GA.BP", "GA.BP", "AA.RC", "GA.BP", "GG.RC",
+                  "AA.BP", "GG.RC", "GG.BP", "AA.RC", "GA.RC", "GA.RC", "AA.BP", "GG.RC", "GA.BP", "AA.RC", "GA.RC", "AA.BP", "GG.BP", "AA.BP", "AA.BP", "GA.BP", "GA.BP", "GA.BP", "GG.BP",
+                  "GG.BP"), each = 216)
+GenotypeAllHeat <- rep(c("GA.BP", "GA.BP", "GA.BP", "GG.BP", "AA.BP", "GG.BP", "GA.BP", "GA.BP", "GA.RC", "GG.RC", "AA.BP", "AA.BP", "GA.RC", "GA.RC", "GA.RC", "GG.RC", "GA.BP", "AA.RC", "GA.RC",
+                               "GG.RC", "GA.RC", "AA.BP", "GG.BP", "GG.RC", "GG.RC", "AA.RC", "GG.RC", "AA.BP", "GG.BP", "GA.RC", "GG.BP", "GG.BP", "GA.RC", "GA.RC", "GA.RC", "GA.BP", "GA.RC", "GG.RC",
+                               "GG.RC", "AA.BP", "GA.RC", "GA.BP", "GG.RC", "AA.BP", "AA.BP", "GA.RC", "GG.RC", "GG.RC", "GA.BP", "AA.RC", "AA.BP", "AA.BP", "GG.RC", "AA.RC", "GA.RC", "GG.RC", "GG.BP",
+                               "GG.BP", "GA.BP", "GG.BP", "GG.BP", "AA.BP", "GG.RC", "GG.BP", "GA.RC", "GG.RC", "GA.BP", "GA.BP", "GA.BP", "GG.BP", "GA.BP", "GA.BP", "GA.BP", "AA.RC", "GA.BP", "GG.RC",
+                               "AA.BP", "GG.RC", "GG.BP", "AA.RC", "GA.RC", "GA.RC", "AA.BP", "GG.RC", "GA.BP", "AA.RC", "GA.RC", "AA.BP", "GG.BP", "AA.BP", "AA.BP", "GA.BP", "GA.BP", "GA.BP", "GG.BP",
+                               "GG.BP"), each = 1594)
+
+#Add Genotype column to the DF
+tpmDF$Genotype <- Genotype
+LowEHeatvControltpmDF$Genotype <- GenotypeLowHeatvsCont
+AllHeatShocktpmDF$Genotype <- GenotypeAllHeat
+
+#Plot Genotype Vs logTPM
+GGHeatShockLow <- ggplot(data = tpmDF, mapping = aes(x = Genotype, y = logTPM)) +
+  geom_boxplot() + geom_point(alpha = 0.7) #or geom_jitter(alpha = .5,width = .1)
+print(GGHeatShockLow)
+
+GGLowElevHeatvsControl <- ggplot(data = LowEHeatvControltpmDF, mapping = aes(x = Genotype, y = logTPM)) +
+  geom_boxplot() + geom_point(alpha = 0.7) #or geom_jitter(alpha = .5,width = .1)
+print(GGLowElevHeatvsControl)
+
+GGAllHeatShock <- ggplot(data = AllHeatShocktpmDF, mapping = aes(x = Genotype, y = logTPM)) +
+  geom_boxplot() + geom_point(alpha = 0.7) #or geom_jitter(alpha = .5,width = .1)
+print(GGAllHeatShock)
+
+
+
+###
+####MDS PLOTS###
+###
+
+#MDS plot (1/2 dimensions) using Treatment/Elevation groups printed out as words, MDS_plot_ElevandTemp.pdf
+par(mfrow=c(1,1)) #return to just one plot per view
+plotMDS(y , main = "MDS Plot for Count Data", labels = colnames( y$counts ), cex=0.5)
+# make a pdf
+pdf(file=paste(out_dir, "MDS_plot_ElevandTemp.pdf", sep=""), height=6, width=6)
+plotMDS(y , main = "MDS Plot for Count Data", labels = ElevTempGroups, cex=0.5)
+dev.off()
+
+#Version with symbols---Plot MDS plots beside each other to look at Treatment versus Genotype, save as MDS_TreatmentvsGenotype.pdf
+par(mfrow=c(1,2))
+col.temptreat <- c("blue","red","blue","red")[ElevTempGroups]
+char.elevation <- c(16,16,1,1)[ElevTempGroups]
+plotMDS(y,col=col.temptreat,pch=char.elevation,cex=1)#Plot MDS plots beside each other to look at Treatment versus Genotype, save as MDS_TreatmentvsGenotype.pdf
+# Let's add a legend to the plot so we know which colours correspond to which cell type
+legcolorElevTemp <- c("blue", "red", "blue", "red")
+legend("bottomleft",col=legcolorElevTemp,pch=c(16,16,1,1),legend=levels(ElevTempGroups), cex = 0.6)
+# Add a title
+title("Treatment")
+col.genotype <- c("red", "blue","red","blue", "red", "blue")[MitonuclearGroup]
+char.genotype <- c(1,1,16,16,4,4)[MitonuclearGroup]
+plotMDS(y,col=col.genotype, pch=char.genotype)
+legcolorGenotype <- c("red", "blue","red","blue", "red", "blue")
+legend("bottomleft",col=legcolorGenotype,pch=c(1,1,16,16,4,4),legend=levels(MitonuclearGroup),cex=0.6)
+title("Genotype")
+
+#Looking at the 3rd and 4th dimension
+par(mfrow=c(1,1))
+col.genotype <- c("red", "blue","red","blue", "red", "blue")[MitonuclearGroup]
+plotMDS(y,dim=c(3,4),col=col.genotype,pch=char.genotype,cex=1)
+legend("bottomleft",col=legcolorGenotype, pch=c(1,1,16,16,4,4),legend=levels(MitonuclearGroup))
+
+
+###
+##
+#Clustering
+##
+###
+
+TPMMatrix <- LowElevHeatvsControlCentered %>% select(-1)
+gene_dist_LowHeatvControl <- dist(TPMMatrix)
+
+head(gene_dist_LowHeatvControl)
+
+gene_hclust <- hclust(gene_dist_LowHeatvControl, method = "complete")
+
+# The default `plot()` function can be used to produce a simple dendrogram
+plot(gene_hclust, labels = FALSE)
+abline(h = 10, col = "brown", lwd = 2) # add horizontal line to illustrate cutting dendrogram
+
+cutree(gene_hclust, k = 6)
+
+gene_cluster <- cutree(gene_hclust, k = 6) %>% 
+  # turn the named vector into a tibble
+  enframe() %>% 
+  # rename some of the columns
+  rename(gene = name, cluster = value)
+
+head(gene_cluster)
+
+names(LowEHeatvControltpmDF)[names(LowEHeatvControltpmDF) == "CloneID"] <- "gene"
+
+trans_tpm_cluster <- LowEHeatvControltpmDF %>% 
+  inner_join(gene_cluster, by = "gene")
+
+#Add Temp treatment to cluster file
+TPMtreatment <- rep(Treatment,each=216)
+trans_tpm_cluster$Treatment <-TPMtreatment
+
+#Add Elevation to cluster file
+TPMelevation <- rep(Rearing_Elevation,each=216)
+trans_tpm_cluster$RearingElevation <-TPMelevation
+
+#Plot clusters as Treatment as x axis and log scaled TPM as y axis
+trans_tpm_cluster %>% 
+  ggplot(aes(Treatment, logTPM)) +
+  geom_line(aes(group = gene)) +
+  facet_grid(rows = vars(Genotype), cols = vars(cluster))
+
+#Plot clusters as Rearing Elevation as x axis and log scaled TPM as y axis
+trans_tpm_cluster %>% 
+  ggplot(aes(RearingElevation, logTPM)) +
+  geom_line(aes(group = gene)) +
+  geom_line(stat = "summary", fun = "median", colour = "brown", size = 1.5, 
+            aes(group = 1)) +
+  facet_grid(rows = vars(Genotype),cols = vars(cluster))
+
+#Finally, here is an advanced ggplot2 trick to add a line to each facet showing the median expression in each cluster:
+trans_tpm_cluster %>% 
+  ggplot(aes(Treatment, logTPM)) +
+  geom_line(aes(group = gene), alpha = 0.3) +
+  geom_line(stat = "summary", fun = "median", colour = "brown", size = 1.5, 
+            aes(group = 1)) +
+  facet_grid(rows = vars(Genotype), cols = vars(cluster))
+
+#Looks like Cluster 6 is interesting, I am going to subset the transcripts in cluster 6
+Cluster6 <- subset(trans_tpm_cluster, cluster == 6)
+#Do the same for Cluster 3
+Cluster3 <- subset(trans_tpm_cluster, cluster == 3)
+#Cluster 5
+Cluster5 <- subset(trans_tpm_cluster, cluster == 5)
+
+
+####
+#Heatmap
+####
+
+#I want to annotate the columns by Library and Treatment
+UniqueLibrary <- trans_tpm_cluster$Library
+UniqueLibrary <- unique(UniqueLibrary)
+annot_col <- data.frame(UniqueLibrary, Treatment)
+rownames(annot_col) <- annot_col$UniqueLibrary
+annot_col$UniqueLibrary <- NULL
+
+#And now plot the heatmap!
+str(TPMMatrix)
+TPMMatrix <- as.matrix(TPMMatrix)
+pheatmap(TPMMatrix, cluster_rows=TRUE, show_rownames=FALSE, show_colnames = FALSE, annotation_col=annot_col )
+
+
+#editing the AllDEGsCentered file for Cluster
+AllDEGS <- AllDEGsCentered %>%
+  +     rename_at(vars(grep("trimmed", names(.))), ~Group1)
 
 
 #######
