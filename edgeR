@@ -219,7 +219,7 @@ lrt_HeatShockLowElevVsNatural <- glmLRT(fit, contrast=my.contrasts[,"HeatShockLo
 #   .pdf of the MA plot
 #   .csv file of topTags, filtered by critical FC and onlyAnnot flag
 #   
-#####
+##### Lines 228-229- Have an error here I need to fix with the comparison being automatically generated from cp, saving different contrasts as the same csv file
 
 get_DEGs <- function(lrt, annot, fdr=0.05, critFC=2, onlyAnnot=FALSE) {
   DEG <- summary(decideTestsDGE(lrt, p=fdr, adjust="BH")) # gives numbers of genes up and downregulated at FDR < pval
