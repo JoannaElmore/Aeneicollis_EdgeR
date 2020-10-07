@@ -132,12 +132,12 @@ y <- DGEList(counts=all_count, group=ElevTempGroups) # group is Rearing_Elevatio
 design <- model.matrix(~0+ElevTempGroups, data=y$samples) # crossed design, same as (~Rearing_Elevation + Treatment + Rearing_Elevation:Treatment ... see section 3.3.4 in edgeR documentation, and double check this meaning with a statistician
 colnames(design) <- levels(ElevTempGroups)
 
-#The single factor method = design2 ...another method that COULD be used if experimental design allows, but must pick ONE
-ElevTempGroups <- factor(paste(Rearing_Elevation,Treatment, sep=".")
+#The single factor method = design2 ...another method that COULD be used if experimental design allows, I got this method from JS's RKC script.
+#ElevTempGroups <- factor(paste(Rearing_Elevation,Treatment, sep=".")
 # DGEList makes an EdgeR object
-y2 <- DGEList(counts=all_count, group=ElevTempGroups) # group is Rearing_Elevation and Treatment
+#y2 <- DGEList(counts=all_count, group=ElevTempGroups) # group is Rearing_Elevation and Treatment
 # define the statistical model, a design matrix using the model.matrix function
-design2 <- model.matrix(~Rearing_Elevation*Treatment, data=y2$samples) # crossed design, same as (~Rearing_Elevation + Treatment + Rearing_Elevation:Treatment ... see section 3.3.4 in edgeR documentation, and double check this meaning with a statistician
+#design2 <- model.matrix(~Rearing_Elevation*Treatment, data=y2$samples) # crossed design, same as (~Rearing_Elevation + Treatment + Rearing_Elevation:Treatment ... see section 3.3.4 in edgeR documentation, and double check this meaning with a statistician
 
 # filter out transcripts that do not have at least two reads out of 1,000,000 reads mapped in at least 4 samples
 y <- y[rowSums(1e+06 * y$counts/expandAsMatrix(y$samples$lib.size, dim(y)) > 2) >= 4, ]
@@ -174,7 +174,8 @@ boxplot(log2(y$counts+1), cex.lab=0.5, cex.axis=0.7, las=2, main="After filter")
 
 # fit the negative binomial generalized linear model (GLM) for each tag, creating a new fit object
 fit <- glmFit(y, design)
-colnames(fit)
+# double check your glmFit is structured correctly 
+colnames(fit) 
 
 # make contrasts
 my.contrasts <- makeContrasts(
