@@ -327,16 +327,6 @@ write.csv(unique_LowElevandHeat_DE_transcripts, paste(out_dir, "unique_LowElevan
 
 
 
-##
-#
-# Get all the transcripts that were being used (for annotation of less than all the data)?????????????????????????????
-#
-##
-
-?????ALL_CA_transcripts = rownames(lrt_inter_0$table)??????
-  write.table(ALL_CA_transcripts,"All_CA_transcriptID.txt", quote=FALSE, row.names=FALSE, col.names=FALSE)
-
-
 #####
 #
 # write cluster files
@@ -377,17 +367,17 @@ write.cluster.file <- function(all_tpm, unique_DE_transcripts, outfile, cnames) 
 }
 
 #broad DGE lists I want to make cluster files for
-unique_all_DE_transcripts
-unique_HeatShock_DE_transcripts
-unique_LowElev_DE_transcripts
+#unique_all_DE_transcripts
+#unique_HeatShock_DE_transcripts
+#unique_LowElev_DE_transcripts
 #smaller lists
-unique_HeatShock_Low_DE_transcripts
-unique_HeatShock_Natural_DE_transcripts
-unique_LowElev_Control_DE_transcripts
-unique_LowElev_HeatShock_DE_transcripts
-unique_HeatShockLowElevvsNatural_DE_transcripts
-unique_LowElevHeatvsControl_DE_transcripts
-unique_LowElevandHeat_DE_transcripts
+#unique_HeatShock_Low_DE_transcripts
+#unique_HeatShock_Natural_DE_transcripts
+#unique_LowElev_Control_DE_transcripts
+#unique_LowElev_HeatShock_DE_transcripts
+#unique_HeatShockLowElevvsNatural_DE_transcripts
+#unique_LowElevHeatvsControl_DE_transcripts
+#unique_LowElevandHeat_DE_transcripts
 
 # concatenate column names from sample ID and groupings to make the column names more informative
 # function to concatenate names
@@ -416,11 +406,10 @@ write.cluster.file(all_tpm, unique_LowElevandHeat_DE_transcripts, paste(out_dir,
 
 ##
 #
-# Get all the transcripts that were being used (for annotation of less than all the data)?????????????????????????????
-#I'm unsure what this will be used for right now and if it's formatted properly
-##
-?????ALL_CA_transcripts = rownames(lrt_inter_0$table)??????
-write.table(ALL_CA_transcripts,"All_CA_transcriptID.txt", quote=FALSE, row.names=FALSE, col.names=FALSE)
+# ??????????????????Get all the transcripts that were being used (for annotation of less than all the data)?????????????????????????????
+#I'm unsure what this will be used for right now and whether or not it's formatted properly
+#?????ALL_CA_transcripts = rownames(lrt_inter_0$table)??????
+#write.table(ALL_CA_transcripts,"All_CA_transcriptID.txt", quote=FALSE, row.names=FALSE, col.names=FALSE)
 
 # # sort by logFC
 # sorted_tags <- annotated_DEGs_pHlow[with(annotated_DEGs_pHlow, order(logFC)), ]
@@ -429,6 +418,7 @@ write.table(ALL_CA_transcripts,"All_CA_transcriptID.txt", quote=FALSE, row.names
 # write.csv(annotated_DEGs_pHlow[ abs(annotated_DEGs_pHlow$logFC) > 1 , ], file=paste( out_dir, "topTags_DEGlist_pHlow_FDR0_00001_PfamHits_logFC_greater_than_2.csv", sep="" )
 # 
 
+##Plotting DEGs in R##
 #read in the .txt files for clustering in R
 LowElevHeatvsControlCentered <- read.delim("~/DGE_analysis_output/centered_data_LowElevHeatvsControl.txt",stringsAsFactors=FALSE)
 AllHeatShockCentered <- read.delim("~/DGE_analysis_output/centered_data_AllHeatShock.txt",stringsAsFactors=FALSE)
