@@ -28,7 +28,7 @@ out_dir <- "/home/elmore5/DGE_analysis_output/"
 # "trinotate_annotation_report.txt" is a Trinotate output excel file, exported as tab-delimited
 transcripts <- read.delim("/vol_b/trinotate_annotation_report.txt",stringsAsFactors=FALSE)
 
-# define groups
+# define groups, load groups file with libraries as columns and library attributes (Rearing_Elevation, Treatment, PGI, and tRNA_L) as rows
 groups <- read.delim("/vol_b/EdgeR_groups.txt", colClasses = c("character", rep("factor",96)))
 str(groups)
 
@@ -125,19 +125,31 @@ boxplot(log2(filtered.all.count+1), las=2) # visualize again
 #
 ##########
 
-#The combined factor method = design ...the method I used due to my experimental design
+#The combined factor method...the method I used due to my experimental design
+# Create a grouping factor to identify what rearing elevation and temperature treatment each sample is assigned
+#Extract the rows of the "groups" object as vectors and convert those vectors into factors
+Rearing_Elevation_vector <- as.vector(groups[1,]) #1 represents the desired row to convert to vector, #groups is data frame, #change Rearing_Elevation_vector to desired name (Rearing_Elevation, Treatment, etc)
+Rearing_Elevation <- factor(Rearing_Elevation_vector) #convert the new vectors into factors
+Temperature_vector <- as.vector(groups[2,])
+Temperature <- factor(Temperature_vector)
+# If needed, Relevel the factors Rearing_Elevation and Treatment so "NaturalElev" and "Control" are set as references, respectively.
+Rearing_Elevation <- relevel(Rearing_Elevation, ref="Natural")
+Treatment <- relevel(Treatment, ref="Control")
+#paste those factors together to create final grouping factor, ElevTempGroups
 ElevTempGroups <- factor(paste(Rearing_Elevation,Treatment, sep=".")
 # DGEList makes an EdgeR object
 y <- DGEList(counts=all_count, group=ElevTempGroups) # group is Rearing_Elevation and Treatment
 design <- model.matrix(~0+ElevTempGroups, data=y$samples) # crossed design, same as (~Rearing_Elevation + Treatment + Rearing_Elevation:Treatment ... see section 3.3.4 in edgeR documentation, and double check this meaning with a statistician
 colnames(design) <- levels(ElevTempGroups)
 
-#The single factor method = design2 ...another method that COULD be used if experimental design allows, I got this method from JS's RKC script.
-#ElevTempGroups <- factor(paste(Rearing_Elevation,Treatment, sep=".")
+###Another method that COULD be used if experimental design allows, I got this method from JS's RKC script and did not modify it. must remove "#'s in front of commands if you'd like to run this one
 # DGEList makes an EdgeR object
-#y2 <- DGEList(counts=all_count, group=ElevTempGroups) # group is Rearing_Elevation and Treatment
+#y <- DGEList(counts=all_count, group=group)
 # define the statistical model, a design matrix using the model.matrix function
-#design2 <- model.matrix(~Rearing_Elevation*Treatment, data=y2$samples) # crossed design, same as (~Rearing_Elevation + Treatment + Rearing_Elevation:Treatment ... see section 3.3.4 in edgeR documentation, and double check this meaning with a statistician
+#design <- model.matrix(~pH*temp, data=y$samples) # crossed design, same as (~ pH + temp + pH:temp ... see section 3.3.4 in edgeR documentation, and double check this meaning with a statistician
+# view the design matrix
+#design
+#colnames(design)
 
 # filter out transcripts that do not have at least two reads out of 1,000,000 reads mapped in at least 4 samples
 y <- y[rowSums(1e+06 * y$counts/expandAsMatrix(y$samples$lib.size, dim(y)) > 2) >= 4, ]
