@@ -28,7 +28,7 @@ out_dir <- "/home/elmore5/DGE_analysis_output/"
 # "trinotate_annotation_report.txt" is a Trinotate output excel file, exported as tab-delimited
 transcripts <- read.delim("/vol_b/trinotate_annotation_report.txt",stringsAsFactors=FALSE)
 
-# define groups, load groups file with libraries as columns and library attributes (Rearing_Elevation, Treatment, PGI, and tRNA_L) as rows
+# define groups, (I loaded groups file with libraries as columns and library attributes (Rearing_Elevation, Treatment, PGI, and tRNA_L) as rows for my DGElist creation method (lines 128-143), but if using JS's method (lines 145-152) JS's recommendation is to format samples as the first column and then sample identifiers as following columns) if there are issues, then format the file as: no. of columns =  no. of samples
 groups <- read.delim("/vol_b/EdgeR_groups.txt", colClasses = c("character", rep("factor",96)))
 str(groups)
 
