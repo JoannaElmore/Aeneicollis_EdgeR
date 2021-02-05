@@ -390,12 +390,12 @@ sampleDF <- data.frame(sample=colnames(all_tpm), treatment=ElevTempGroups)
 sampleNames <- apply(sampleDF, 1, concat_name)
 sampleNames
 
-#the cluster files we want
-write.cluster.file(all_tpm, unique_HeatShock_DE_transcripts, paste(out_dir, "centered_data_AllHeatShock.txt", sep=""), sampleNames)
-write.cluster.file(all_tpm, unique_LowElev_DE_transcripts, paste(out_dir, "centered_data_AllLowElev.txt", sep=""), sampleNames)
+#the cluster file we want
 write.cluster.file(all_tpm, unique_all_DE_transcripts, paste(out_dir, "centered_data_AllDEGs.txt", sep=""), sampleNames)
 
 #OPTIONAL cluster files you can make for extra work or fun
+write.cluster.file(all_tpm, unique_HeatShock_DE_transcripts, paste(out_dir, "centered_data_AllHeatShock.txt", sep=""), sampleNames)
+write.cluster.file(all_tpm, unique_LowElev_DE_transcripts, paste(out_dir, "centered_data_AllLowElev.txt", sep=""), sampleNames)
 write.cluster.file(all_tpm, unique_HeatShock_Low_DE_transcripts, paste(out_dir, "centered_data_HeatShock_Low.txt", sep=""), sampleNames)
 write.cluster.file(all_tpm, unique_HeatShock_Natural_DE_transcripts, paste(out_dir, "centered_data_HeatShock_Natural.txt", sep=""), sampleNames)
 write.cluster.file(all_tpm, unique_LowElev_Control_DE_transcripts, paste(out_dir, "centered_data_LowElev_Control.txt", sep=""), sampleNames)
