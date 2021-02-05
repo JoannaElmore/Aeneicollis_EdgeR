@@ -404,19 +404,20 @@ write.cluster.file(all_tpm, unique_HeatShockLowElevVsNatural_DE_transcripts, pas
 write.cluster.file(all_tpm, unique_LowElevHeatvsControl_DE_transcripts, paste(out_dir, "centered_data_LowElevHeatvsControl.txt", sep=""), sampleNames)
 write.cluster.file(all_tpm, unique_LowElevandHeat_DE_transcripts, paste(out_dir, "centered_data_LowElevandHeat.txt", sep=""), sampleNames)
 
-##
+##From here, you can take the file that you get from the write.cluster.file containing all DEGs to input into Cluster 3.0 and Tree View!##
+
+##Joanna didn't do this chunk#
 #
 # ??????????????????Get all the transcripts that were being used (for annotation of less than all the data)?????????????????????????????
 #I'm unsure what this will be used for right now and whether or not it's formatted properly
 #?????ALL_CA_transcripts = rownames(lrt_inter_0$table)??????
 #write.table(ALL_CA_transcripts,"All_CA_transcriptID.txt", quote=FALSE, row.names=FALSE, col.names=FALSE)
-
 # # sort by logFC
 # sorted_tags <- annotated_DEGs_pHlow[with(annotated_DEGs_pHlow, order(logFC)), ]
 # 
 # # write a .csv based on a threshold FC, in this case, ( FC < 0.5 ) and ( FC > 2 )
 # write.csv(annotated_DEGs_pHlow[ abs(annotated_DEGs_pHlow$logFC) > 1 , ], file=paste( out_dir, "topTags_DEGlist_pHlow_FDR0_00001_PfamHits_logFC_greater_than_2.csv", sep="" )
-# 
+#End of where Joanna didn't run# 
 
 ##Plotting DEGs in R##
 #read in the .txt files for clustering in R
@@ -512,7 +513,7 @@ legend("bottomleft",col=legcolorGenotype, pch=c(1,1,16,16,4,4),legend=levels(Mit
 
 ###
 ##
-#Clustering
+#Clustering in R
 ##
 ###
 
@@ -613,7 +614,7 @@ plotMDS(newMDSdata[,c(3:47)] , main = "MDS Plot of DE genes", labels = group, ce
 
 
 
-
+Back to JS script, unmodified by Joanna
 ##########
 #
 # Functions for genewise data analysis
